@@ -5,7 +5,10 @@
   "description": "SOVD diagnostic foundation — local dev runner",
   "scripts": {
     "install:frontend": "npm install --prefix src/frontend",
+    "install:bridge": "npm install --prefix src/renode-bridge",
     "postinstall": "npm run install:frontend",
+    "start:renode": "renode --robot-server-port 55555 --disable-gui --plain renode/ecm.resc",
+    "dev:bridge": "node src/renode-bridge/index.mjs",
     "start": "concurrently --names \"server,frontend\" --prefix-colors \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:frontend\"",
     "dev:server": "dotnet run --project src/SovdServer/SovdServer.csproj",
     "dev:frontend": "npm run dev --prefix src/frontend",

@@ -27,8 +27,8 @@ Makefile
 *.dylib
 
 # Generated D-Bus glue headers (produced at build time by sdbus-c++-xml2cpp)
-src/GatewayECU/build/
-src/EcuSimulator/build/
+src/CDA/build/
+src/ECM/build/
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 .docker/

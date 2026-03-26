@@ -5,7 +5,7 @@ import DataPanel from './DataPanel.vue'
 import OperationPanel from './OperationPanel.vue'
 import CapabilityBadges from './CapabilityBadges.vue'
 
-const props = defineProps<{ ecuId: string }>()
+defineProps<{ ecuId: string }>()
 
 type Tab = 'data' | 'faults' | 'operations'
 const activeTab = ref<Tab>('data')

@@ -10,11 +10,15 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 5174,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:5000',
         changeOrigin: true,
+      },
+      '/ws/renode': {
+        target: 'ws://localhost:8787',
+        ws: true,
       },
     },
   },

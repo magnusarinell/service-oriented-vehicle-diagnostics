@@ -4,8 +4,8 @@ using Tmds.DBus.Protocol;
 namespace SovdServer.Gateway;
 
 /// <summary>
-/// D-Bus gateway that communicates with the GatewayECU C++ service.
-/// Requires the dbus-daemon container and GatewayECU container to be running.
+/// D-Bus gateway that communicates with the CDA C++ service.
+/// Requires the dbus-daemon container and CDA container to be running.
 /// Activated when SOVD_GATEWAY_IMPL=dbus.
 /// </summary>
 internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
@@ -23,9 +23,13 @@ internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
         _connection = new Connection($"unix:path={socketPath}");
     }
 
-    public async ValueTask DisposeAsync() => await _connection.DisposeAsync();
+    public ValueTask DisposeAsync()
+    {
+        _connection.Dispose();
+        return ValueTask.CompletedTask;
+    }
 
-    // All methods delegate to D-Bus calls. The GatewayECU service serialises
+    // All methods delegate to D-Bus calls. The CDA service serialises
     // its responses as JSON strings so we can deserialise here with source-gen context.
 
     public async Task<List<SovdCapability>> GetCapabilitiesAsync(string ecuId, CancellationToken ct = default)
@@ -72,13 +76,13 @@ internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
     private async Task<string> CallMethodAsync(string methodName, string argument, CancellationToken ct)
     {
         await _connection.ConnectAsync();
-        await using var message = CreateMethodCall(methodName, argument);
-        var reply = await _connection.CallMethodAsync(message, ct);
-        reply.DangerousGetBody().TryRead<string>(out var result);
+        var message = CreateMethodCall(methodName, argument);
+        var result = await _connection.CallMethodAsync(message,
+            static (Message msg, object? _) => msg.GetBodyReader().ReadString());
         return result ?? "[]";
     }
 
-    private Message CreateMethodCall(string methodName, string argument)
+    private MessageBuffer CreateMethodCall(string methodName, string argument)
     {
         var writer = _connection.GetMessageWriter();
         writer.WriteMethodCallHeader(

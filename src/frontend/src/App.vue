@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import EcuDashboard from '@/components/EcuDashboard.vue'
+import EcmVisualizer from '@/components/ecm/EcmVisualizer.vue'
 
 // Known ECUs — extend this list as more units are added
 const knownEcus = ['ecu0']
@@ -24,7 +25,9 @@ const selectedEcu = ref(knownEcus[0])
       </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 py-8">
+    <!-- Split layout: ECM Visualizer (left) + SOVD Client (right) -->
+    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+      <EcmVisualizer />
       <EcuDashboard :key="selectedEcu" :ecu-id="selectedEcu" />
     </main>
   </div>

@@ -6,7 +6,7 @@ A demonistration project implementing the [ASAM SOVD](https://www.asam.net/stand
 
 ```
 ┌─────────────────────────────┐
-│  Vue 3 Frontend  :5173/8090 │  Vite + TypeScript + Tailwind
+│  Vue 3 Frontend  :5174/8090 │  Vite + TypeScript + Tailwind
 └──────────┬──────────────────┘
            │  HTTP/JSON  /api/v1/ecu/{ecuId}/...
 ┌──────────┴──────────────────┐
@@ -15,13 +15,14 @@ A demonistration project implementing the [ASAM SOVD](https://www.asam.net/stand
 └──────────┬──────────────────┘
            │  D-Bus  (Tmds.DBus.Protocol / unix socket)
 ┌──────────┴──────────────────┐
-│  GatewayECU  (C++)          │  sdbus-c++ adaptor + vsomeip client
+│  CDA  (C++)                 │  Component Diagnostic Adapter
+│                             │  sdbus-c++ adaptor + vsomeip client
 └──────────┬──────────────────┘
            │  SOME/IP over TCP  (vsomeip 3.x, unicast)
 ┌──────────┴──────────────────┐
-│  ECU Simulator  (C++)       │  vsomeip service, hardcoded diagnostic data
+│  ECM  (C++ / NXP K64F)      │  Engine Control Module
+│                             │  vsomeip service + Renode firmware (Phase 2)
 └─────────────────────────────┘
-   [Phase 2: Renode + NXP FRDM-K64F firmware]
 ```
 
 ## Technologies
@@ -98,8 +99,8 @@ Services:
 |---|---|---|
 | `frontend` | `8090` | Vue 3 app (nginx) |
 | `sovd-server` | — (internal) | .NET 9 AOT REST API |
-| `gateway-ecu` | — (internal) | C++ D-Bus + SOME/IP bridge |
-| `ecu-simulator` | — (internal) | C++ vsomeip SOME/IP service |
+| `cda` | — (internal) | C++ Component Diagnostic Adapter (D-Bus + SOME/IP) |
+| `ecm` | — (internal) | C++ Engine Control Module (vsomeip SOME/IP service) |
 | `dbus-daemon` | — (internal) | System D-Bus daemon (shared socket volume) |
 
 Open `http://localhost:8090` for the UI, or call the API directly:
@@ -123,15 +124,15 @@ curl -X POST http://localhost:8090/api/v1/ecu/ecu0/operations/reset/execute \
 │   │       ├── InMemoryEcuGateway.cs Local dev stub
 │   │       └── DbusEcuGateway.cs     D-Bus client (Docker)
 │   │
-│   ├── GatewayECU/              C++ D-Bus service + SOME/IP client
-│   │   ├── CMakeLists.txt
-│   │   ├── interfaces/gateway-ecu.xml   D-Bus interface definition
-│   │   └── src/
-│   │       ├── GatewayDbusService.{h,cpp}   sdbus-c++ adaptor
-│   │       ├── EcuSomeIpClient.{h,cpp}      vsomeip client
-│   │       └── main.cpp
-│   │
-│   ├── EcuSimulator/            C++ SOME/IP service (simulated ECU)
+   ├── CDA/                     C++ Component Diagnostic Adapter
+   │   ├── CMakeLists.txt
+   │   ├── interfaces/cda-dbus.xml      D-Bus interface definition
+   │   └── src/
+   │       ├── GatewayDbusService.{h,cpp}   sdbus-c++ adaptor
+   │       ├── EcuSomeIpClient.{h,cpp}      vsomeip client
+   │       └── main.cpp
+   │
+   ├── ECM/                     C++ Engine Control Module
 │   │   ├── CMakeLists.txt
 │   │   ├── vsomeip/ecu-sim.json  vsomeip configuration
 │   │   └── src/
@@ -148,11 +149,11 @@ curl -X POST http://localhost:8090/api/v1/ecu/ecu0/operations/reset/execute \
 │
 ├── docker/
 │   ├── sovd-server.Dockerfile    Multi-stage: .NET SDK → ubuntu (AOT binary)
-│   ├── gateway-ecu.Dockerfile    Multi-stage: build vsomeip+sdbus-c++ from source
-│   ├── ecu-simulator.Dockerfile  Multi-stage: build vsomeip from source
-│   ├── frontend.Dockerfile       Multi-stage: npm build → nginx
-│   ├── nginx.conf                /api proxy + SPA fallback
-│   └── gateway-ecu-vsomeip.json  vsomeip unicast config for Docker network
+   ├── cda.Dockerfile            Multi-stage: build vsomeip+sdbus-c++ from source
+   ├── ecm.Dockerfile            Multi-stage: build vsomeip from source
+   ├── frontend.Dockerfile       Multi-stage: npm build → nginx
+   ├── nginx.conf                /api proxy + SPA fallback
+   └── cda-vsomeip.json          vsomeip unicast config for Docker network
 └── docker-compose.yml
 ```
 
@@ -191,8 +192,10 @@ Switch by setting the environment variable before starting the server.
 
 ## Phase 2: Renode + NXP K64F
 
-The EcuSimulator can be replaced with firmware running in [Renode](https://renode.io/) on an emulated NXP FRDM-K64F board:
+The ECM can be replaced with firmware running in [Renode](https://renode.io/) on an emulated NXP FRDM-K64F board:
 
 - Baremetal C firmware: LwIP TCP/IP stack, minimal SOME/IP request/response
 - Renode `.resc` platform script with emulated Ethernet bridged to the Docker network
-- Same SOME/IP service IDs — GatewayECU requires no changes
+- Same SOME/IP service IDs — CDA requires no changes
+- **ECM Visualizer** panel in the frontend connects to a Renode bridge service via WebSocket;
+  click "Cut cable" to inject faults via Renode XML-RPC → fault propagates through SOME/IP → CDA → SOVD Server → frontend

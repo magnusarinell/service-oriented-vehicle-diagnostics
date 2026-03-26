@@ -14,28 +14,29 @@ services:
     networks:
       - sovd-net
 
-  # ── ECU Simulator (SOME/IP service) ──────────────────────────────────────
-  ecu-simulator:
+  # ── ECM / Engine Control Module (SOME/IP service) ───────────────────────
+  ecm:
     build:
       context: .
-      dockerfile: docker/ecu-simulator.Dockerfile
+      dockerfile: docker/ecm.Dockerfile
     environment:
       VSOMEIP_CONFIGURATION: /etc/vsomeip/vsomeip.json
+      ECU_SIM_UNICAST: "172.20.0.10"
     networks:
       sovd-net:
         ipv4_address: 172.20.0.10
 
-  # ── GatewayECU (SOME/IP client + D-Bus service) ───────────────────────────
-  gateway-ecu:
+  # ── CDA / Component Diagnostic Adapter (SOME/IP client + D-Bus service) ──
+  cda:
     build:
       context: .
-      dockerfile: docker/gateway-ecu.Dockerfile
+      dockerfile: docker/cda.Dockerfile
     depends_on:
       - dbus-daemon
-      - ecu-simulator
+      - ecm
     volumes:
       - dbus-socket:/run/dbus
-      - ./docker/gateway-ecu-vsomeip.json:/etc/vsomeip/vsomeip.json:ro
+      - ./docker/cda-vsomeip.json:/etc/vsomeip/vsomeip.json:ro
     environment:
       DBUS_SYSTEM_BUS_ADDRESS: "unix:path=/run/dbus/system_bus_socket"
     networks:
@@ -49,7 +50,7 @@ services:
       dockerfile: docker/sovd-server.Dockerfile
     depends_on:
       - dbus-daemon
-      - gateway-ecu
+      - cda
     volumes:
       - dbus-socket:/run/dbus
     environment:
