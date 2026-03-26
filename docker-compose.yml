@@ -1,0 +1,82 @@
+services:
+
+  # ── D-Bus daemon ─────────────────────────────────────────────────────────
+  dbus-daemon:
+    image: ubuntu:22.04
+    command: >
+      bash -c "
+        apt-get update -qq && apt-get install -y -qq dbus &&
+        mkdir -p /run/dbus &&
+        dbus-daemon --system --nofork --print-address
+      "
+    volumes:
+      - dbus-socket:/run/dbus
+    networks:
+      - sovd-net
+
+  # ── ECU Simulator (SOME/IP service) ──────────────────────────────────────
+  ecu-simulator:
+    build:
+      context: .
+      dockerfile: docker/ecu-simulator.Dockerfile
+    environment:
+      VSOMEIP_CONFIGURATION: /etc/vsomeip/vsomeip.json
+    networks:
+      sovd-net:
+        ipv4_address: 172.20.0.10
+
+  # ── GatewayECU (SOME/IP client + D-Bus service) ───────────────────────────
+  gateway-ecu:
+    build:
+      context: .
+      dockerfile: docker/gateway-ecu.Dockerfile
+    depends_on:
+      - dbus-daemon
+      - ecu-simulator
+    volumes:
+      - dbus-socket:/run/dbus
+      - ./docker/gateway-ecu-vsomeip.json:/etc/vsomeip/vsomeip.json:ro
+    environment:
+      DBUS_SYSTEM_BUS_ADDRESS: "unix:path=/run/dbus/system_bus_socket"
+    networks:
+      sovd-net:
+        ipv4_address: 172.20.0.11
+
+  # ── SOVD Server (C# .NET 9 AOT REST API) ──────────────────────────────────
+  sovd-server:
+    build:
+      context: .
+      dockerfile: docker/sovd-server.Dockerfile
+    depends_on:
+      - dbus-daemon
+      - gateway-ecu
+    volumes:
+      - dbus-socket:/run/dbus
+    environment:
+      SOVD_GATEWAY_IMPL: dbus
+      DBUS_SOCKET_PATH: /run/dbus/system_bus_socket
+      ASPNETCORE_URLS: http://+:8080
+    networks:
+      - sovd-net
+
+  # ── Frontend (Vite build → nginx) ─────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    depends_on:
+      - sovd-server
+    ports:
+      - "8090:80"
+    networks:
+      - sovd-net
+
+volumes:
+  dbus-socket:
+
+networks:
+  sovd-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,51 @@
+# ── .NET ─────────────────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+publish/
+
+# ── Node / Vite ───────────────────────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+*.local
+
+# ── C++ / CMake ───────────────────────────────────────────────────────────────
+build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+
+# Generated D-Bus glue headers (produced at build time by sdbus-c++-xml2cpp)
+src/GatewayECU/build/
+src/EcuSimulator/build/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.docker/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+*.swp
+*~
+
+# ── Logs & temp ───────────────────────────────────────────────────────────────
+*.log
+*.tmp
+npm-debug.log*

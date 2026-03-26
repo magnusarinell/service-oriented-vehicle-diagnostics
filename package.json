@@ -1,0 +1,19 @@
+{
+  "name": "service-oriented-vehicle-diagnostics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SOVD diagnostic foundation — local dev runner",
+  "scripts": {
+    "install:frontend": "npm install --prefix src/frontend",
+    "postinstall": "npm run install:frontend",
+    "start": "concurrently --names \"server,frontend\" --prefix-colors \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:frontend\"",
+    "dev:server": "dotnet run --project src/SovdServer/SovdServer.csproj",
+    "dev:frontend": "npm run dev --prefix src/frontend",
+    "build": "npm run build:server && npm run build:frontend",
+    "build:server": "dotnet build src/SovdServer/SovdServer.csproj -c Release",
+    "build:frontend": "npm run build --prefix src/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

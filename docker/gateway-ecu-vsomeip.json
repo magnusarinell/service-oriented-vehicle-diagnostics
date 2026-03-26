@@ -1,0 +1,27 @@
+{
+    "unicast": "172.20.0.11",
+    "netmask": "255.255.0.0",
+    "logging": {
+        "level": "info",
+        "console": true,
+        "file": { "enable": false }
+    },
+    "applications": [
+        {
+            "name": "gateway-ecu",
+            "id": "0x1414"
+        }
+    ],
+    "clients": [
+        {
+            "service":  "0x1111",
+            "instance": "0x0001",
+            "unreliable_remote_port": "0",
+            "reliable_remote_port": "30511"
+        }
+    ],
+    "routing": "gateway-ecu",
+    "service-discovery": {
+        "enable": "false"
+    }
+}

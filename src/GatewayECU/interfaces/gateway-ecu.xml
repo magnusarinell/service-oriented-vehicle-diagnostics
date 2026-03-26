@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  D-Bus interface between SOVD Server (C# Tmds.DBus.Protocol client)
+  and GatewayECU (C++ sdbus-c++ service).
+
+  Convention: all methods accept a single string argument (ecuId or
+  "ecuId:param") and return a JSON string, keeping the interface
+  generic enough to add ECUs without changing the D-Bus schema.
+-->
+<node name="/com/vehicle/gateway">
+  <interface name="com.vehicle.gateway.IDiagnosticManager">
+
+    <method name="GetCapabilities">
+      <arg type="s" name="ecuId"  direction="in"/>
+      <arg type="s" name="result" direction="out"/>
+    </method>
+
+    <method name="ReadData">
+      <arg type="s" name="ecuId"  direction="in"/>
+      <arg type="s" name="result" direction="out"/>
+    </method>
+
+    <method name="ReadDataItem">
+      <!-- argument format: "ecuId:dataId" -->
+      <arg type="s" name="ecuIdAndDataId" direction="in"/>
+      <arg type="s" name="result"         direction="out"/>
+    </method>
+
+    <method name="GetFaults">
+      <arg type="s" name="ecuId"  direction="in"/>
+      <arg type="s" name="result" direction="out"/>
+    </method>
+
+    <method name="ClearFaults">
+      <arg type="s" name="ecuId"  direction="in"/>
+      <arg type="s" name="result" direction="out"/>
+    </method>
+
+    <method name="GetOperations">
+      <arg type="s" name="ecuId"  direction="in"/>
+      <arg type="s" name="result" direction="out"/>
+    </method>
+
+    <method name="ExecuteOperation">
+      <!-- argument format: "ecuId:operationId" -->
+      <arg type="s" name="ecuIdAndOpId" direction="in"/>
+      <arg type="s" name="result"       direction="out"/>
+    </method>
+
+  </interface>
+</node>
