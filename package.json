@@ -4,17 +4,17 @@
   "private": true,
   "description": "SOVD diagnostic foundation — local dev runner",
   "scripts": {
-    "install:frontend": "npm install --prefix src/frontend",
-    "install:bridge": "npm install --prefix src/renode-bridge",
+    "install:frontend": "npm install --prefix Simulator/frontend",
+    "install:bridge": "npm install --prefix Simulator/renode-bridge",
     "postinstall": "npm run install:frontend",
-    "start:renode": "renode --robot-server-port 55555 --disable-gui --plain renode/ecm.resc",
-    "dev:bridge": "node src/renode-bridge/index.mjs",
+    "start:renode": "renode --robot-server-port 55555 --disable-gui --plain renode/door-ecu.resc",
+    "dev:bridge": "node Simulator/renode-bridge/index.mjs",
     "start": "concurrently --names \"server,frontend\" --prefix-colors \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:frontend\"",
-    "dev:server": "dotnet run --project src/SovdServer/SovdServer.csproj",
-    "dev:frontend": "npm run dev --prefix src/frontend",
+    "dev:server": "dotnet run --project HPC/SovdServer/SovdServer.csproj",
+    "dev:frontend": "npm run dev --prefix Simulator/frontend",
     "build": "npm run build:server && npm run build:frontend",
-    "build:server": "dotnet build src/SovdServer/SovdServer.csproj -c Release",
-    "build:frontend": "npm run build --prefix src/frontend"
+    "build:server": "dotnet build HPC/SovdServer/SovdServer.csproj -c Release",
+    "build:frontend": "npm run build --prefix Simulator/frontend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

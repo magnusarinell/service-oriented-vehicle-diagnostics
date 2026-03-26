@@ -27,8 +27,11 @@ Makefile
 *.dylib
 
 # Generated D-Bus glue headers (produced at build time by sdbus-c++-xml2cpp)
-src/CDA/build/
-src/ECM/build/
+HPC/CDA/build/
+ZoneController/build/
+DoorECU/build/
+Simulator/frontend/dist/
+Simulator/renode-bridge/node_modules/
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 .docker/

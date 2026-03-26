@@ -3,11 +3,11 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Restore separately so layer is cached
-COPY src/SovdServer/SovdServer.csproj ./SovdServer/
+COPY HPC/SovdServer/SovdServer.csproj ./SovdServer/
 RUN dotnet restore ./SovdServer/SovdServer.csproj -r linux-x64
 
 # Copy source and publish native AOT binary
-COPY src/SovdServer/ ./SovdServer/
+COPY HPC/SovdServer/ ./SovdServer/
 RUN dotnet publish ./SovdServer/SovdServer.csproj \
       -r linux-x64 -c Release \
       --no-restore \

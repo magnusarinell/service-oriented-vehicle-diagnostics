@@ -1,0 +1,29 @@
+{
+    "unicast": "${ZONE_CONTROLLER_UNICAST}",
+    "netmask": "255.255.0.0",
+    "logging": {
+        "level": "info",
+        "console": true,
+        "file": { "enable": false }
+    },
+    "applications": [
+        {
+            "name": "zone-controller",
+            "id": "0x1313"
+        }
+    ],
+    "services": [
+        {
+            "service":  "0x1111",
+            "instance": "0x0001",
+            "reliable": {
+                "port": "30511",
+                "enable-magic-cookies": false
+            }
+        }
+    ],
+    "routing": "zone-controller",
+    "service-discovery": {
+        "enable": "false"
+    }
+}

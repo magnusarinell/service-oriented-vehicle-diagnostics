@@ -5,23 +5,29 @@ A demonistration project implementing the [ASAM SOVD](https://www.asam.net/stand
 ## Architecture
 
 ```
-┌─────────────────────────────┐
-│  Vue 3 Frontend  :5174/8090 │  Vite + TypeScript + Tailwind
-└──────────┬──────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Simulator/frontend  :5174/8090                             │  Vue 3 + TypeScript + Tailwind
+│  DoorECU Visualizer ← WebSocket → Simulator/renode-bridge  │  WebSocket bridge → Renode XML-RPC
+└──────────┬──────────────────────────────────────────────────┘
            │  HTTP/JSON  /api/v1/ecu/{ecuId}/...
 ┌──────────┴──────────────────┐
-│  SOVD Server  (C# .NET 9)   │  ASP.NET Core Minimal API, PublishAot=true
+│  HPC / SovdServer           │  C# .NET 9 AOT, ASP.NET Core Minimal API
 │  :8080                      │  IEcuGateway abstraction (inmemory | dbus)
 └──────────┬──────────────────┘
            │  D-Bus  (Tmds.DBus.Protocol / unix socket)
 ┌──────────┴──────────────────┐
-│  CDA  (C++)                 │  Component Diagnostic Adapter
+│  HPC / CDA  (C++)           │  Component Diagnostic Adapter
 │                             │  sdbus-c++ adaptor + vsomeip client
 └──────────┬──────────────────┘
            │  SOME/IP over TCP  (vsomeip 3.x, unicast)
 ┌──────────┴──────────────────┐
-│  ECM  (C++ / NXP K64F)      │  Engine Control Module
-│                             │  vsomeip service + Renode firmware (Phase 2)
+│  ZoneController  (C++)      │  SOME/IP service + UDSClient stub
+│                             │  Routes requests to DoorECU via stubbed UDS
+└──────────┬──────────────────┘
+           │  UDS (stubbed — hardcoded responses)
+┌──────────┴──────────────────┐
+│  DoorECU  (NXP FRDM-K64F)  │  Baremetal C firmware
+│  172.20.0.30:30509          │  LwIP SOME/IP server · Renode emulation
 └─────────────────────────────┘
 ```
 
@@ -98,9 +104,9 @@ Services:
 | Service | Port | Description |
 |---|---|---|
 | `frontend` | `8090` | Vue 3 app (nginx) |
-| `sovd-server` | — (internal) | .NET 9 AOT REST API |
-| `cda` | — (internal) | C++ Component Diagnostic Adapter (D-Bus + SOME/IP) |
-| `ecm` | — (internal) | C++ Engine Control Module (vsomeip SOME/IP service) |
+| `sovd-server` | — (internal) | .NET 9 AOT REST API (HPC/SovdServer) |
+| `cda` | — (internal) | C++ Component Diagnostic Adapter (HPC/CDA, D-Bus + SOME/IP) |
+| `zone-controller` | — (internal) | C++ ZoneController — SOME/IP service + UDSClient stub |
 | `dbus-daemon` | — (internal) | System D-Bus daemon (shared socket volume) |
 
 Open `http://localhost:8090` for the UI, or call the API directly:
@@ -115,8 +121,8 @@ curl -X POST http://localhost:8090/api/v1/ecu/ecu0/operations/reset/execute \
 ## Project Structure
 
 ```
-├── src/
-│   ├── SovdServer/              C# .NET 9 AOT
+├── HPC/
+│   ├── SovdServer/              C# .NET 9 AOT REST API
 │   │   ├── Program.cs           Minimal API routes + DI configuration
 │   │   ├── Models/              SovdModels.cs, SovdSerializationContext.cs
 │   │   └── Gateway/
@@ -124,36 +130,54 @@ curl -X POST http://localhost:8090/api/v1/ecu/ecu0/operations/reset/execute \
 │   │       ├── InMemoryEcuGateway.cs Local dev stub
 │   │       └── DbusEcuGateway.cs     D-Bus client (Docker)
 │   │
-   ├── CDA/                     C++ Component Diagnostic Adapter
-   │   ├── CMakeLists.txt
-   │   ├── interfaces/cda-dbus.xml      D-Bus interface definition
-   │   └── src/
-   │       ├── GatewayDbusService.{h,cpp}   sdbus-c++ adaptor
-   │       ├── EcuSomeIpClient.{h,cpp}      vsomeip client
-   │       └── main.cpp
-   │
-   ├── ECM/                     C++ Engine Control Module
-│   │   ├── CMakeLists.txt
-│   │   ├── vsomeip/ecu-sim.json  vsomeip configuration
-│   │   └── src/
-│   │       ├── DiagService.{h,cpp}   Hardcoded diagnostic data
-│   │       └── main.cpp
-│   │
-│   └── frontend/                Vite + Vue 3 + TypeScript
+│   └── CDA/                     C++ Component Diagnostic Adapter
+│       ├── CMakeLists.txt
+│       ├── interfaces/cda-dbus.xml      D-Bus interface definition
 │       └── src/
-│           ├── types/sovd.ts         SOVD TypeScript types
-│           ├── composables/useEcu.ts Reactive fetch wrapper
-│           ├── components/           FaultList, DataPanel, OperationPanel,
-│           │                         CapabilityBadges, EcuDashboard
-│           └── App.vue
+│           ├── GatewayDbusService.{h,cpp}   sdbus-c++ adaptor
+│           ├── EcuSomeIpClient.{h,cpp}      vsomeip client
+│           └── main.cpp
+│
+├── ZoneController/              C++ SOME/IP service (AUTOSAR ZoneController)
+│   ├── CMakeLists.txt
+│   ├── vsomeip/zone-controller.json  vsomeip configuration
+│   └── src/
+│       ├── DiagService.{h,cpp}   SOME/IP handlers + UDSClient stub
+│       └── main.cpp
+│
+├── DoorECU/                     NXP FRDM-K64F baremetal C firmware
+│   ├── CMakeLists.txt
+│   ├── toolchain-k64f.cmake
+│   └── src/
+│       ├── diag_data.{h,c}      Door sensor data + fault flags (B-codes)
+│       ├── someip.{h,c}         LwIP TCP SOME/IP server
+│       └── main.c
+│
+├── Simulator/
+│   ├── frontend/                Vite + Vue 3 + TypeScript
+│   │   └── src/
+│   │       ├── types/           sovd.ts, renode.ts (DoorEcuFaultBits, B-codes)
+│   │       ├── composables/     useEcu.ts, useRenode.ts
+│   │       ├── components/      EcuDashboard, FaultList, DataPanel,
+│   │       │   └── door-ecu/    DoorEcuBoard.vue, DoorEcuVisualizer.vue
+│   │       └── App.vue
+│   │
+│   └── renode-bridge/           Node.js Fastify WebSocket bridge
+│       ├── index.mjs
+│       ├── config.mjs           RENODE_MACHINE, FAULT_BITS, paths
+│       └── lib/renode.mjs       Renode XML-RPC + .map file symbol lookup
+│
+├── renode/
+│   ├── door-ecu.repl            K64F platform + EthernetBridge (tap0)
+│   └── door-ecu.resc            Renode simulation launch script
 │
 ├── docker/
-│   ├── sovd-server.Dockerfile    Multi-stage: .NET SDK → ubuntu (AOT binary)
-   ├── cda.Dockerfile            Multi-stage: build vsomeip+sdbus-c++ from source
-   ├── ecm.Dockerfile            Multi-stage: build vsomeip from source
-   ├── frontend.Dockerfile       Multi-stage: npm build → nginx
-   ├── nginx.conf                /api proxy + SPA fallback
-   └── cda-vsomeip.json          vsomeip unicast config for Docker network
+│   ├── sovd-server.Dockerfile   Multi-stage: .NET SDK → ubuntu (AOT binary)
+│   ├── cda.Dockerfile           Multi-stage: build vsomeip+sdbus-c++ from source
+│   ├── zone-controller.Dockerfile  Multi-stage: build vsomeip from source
+│   ├── frontend.Dockerfile      Multi-stage: npm build → nginx
+│   ├── nginx.conf               /api proxy + SPA fallback
+│   └── gateway-ecu-vsomeip.json vsomeip unicast config for Docker network
 └── docker-compose.yml
 ```
 
@@ -172,9 +196,9 @@ Switch by setting the environment variable before starting the server.
 
 | Type | Data |
 |---|---|
-| Live data | Coolant temp 82°C, Battery 12.6V, Engine RPM 0, Speed 0 km/h |
-| Faults | P0100 (MAF circuit, high severity), P0200 (Injector circuit, medium) |
-| Operations | `reset` (ECU soft reset), `self_test` (internal diagnostics) |
+| Live data | lock_state (locked/unlocked), window_pos (0–100%), mirror_angle (°), door_ajar |
+| Faults | B1001 (Door Latch), B1002 (Window Motor), B1003 (CAN Cable Fault) |
+| Operations | `unlock_door`, `reset_window` |
 
 ## SOME/IP Service Identifiers
 
@@ -190,12 +214,32 @@ Switch by setting the environment variable before starting the server.
 | GetOperations | `0x0006` |
 | ExecuteOperation | `0x0007` |
 
-## Phase 2: Renode + NXP K64F
+## Phase 2: Renode + NXP K64F (DoorECU)
 
-The ECM can be replaced with firmware running in [Renode](https://renode.io/) on an emulated NXP FRDM-K64F board:
+The DoorECU is emulated in [Renode](https://renode.io/) running a baremetal C firmware on an emulated NXP FRDM-K64F board:
 
-- Baremetal C firmware: LwIP TCP/IP stack, minimal SOME/IP request/response
-- Renode `.resc` platform script with emulated Ethernet bridged to the Docker network
-- Same SOME/IP service IDs — CDA requires no changes
-- **ECM Visualizer** panel in the frontend connects to a Renode bridge service via WebSocket;
-  click "Cut cable" to inject faults via Renode XML-RPC → fault propagates through SOME/IP → CDA → SOVD Server → frontend
+- `DoorECU/` — Baremetal C firmware: LwIP NO_SYS=1 TCP/IP stack, SOME/IP request/response, B-code door fault flags
+- `renode/door-ecu.repl` — K64F platform description with EthernetBridge on `tap0`
+- `renode/door-ecu.resc` — Renode launch script; load with `npm run start:renode`
+- `Simulator/renode-bridge/` — Node.js Fastify + WebSocket bridge to Renode XML-RPC (port 8787)
+- **DoorECU Visualizer** panel in the frontend connects via WebSocket; click "Cut Cable" to set B1003, "Inject Fault" for B1001/B1002 — faults propagate through SOME/IP → ZoneController → CDA → SOVD Server → frontend
+
+### Running Phase 2 locally (Linux host required for tap0)
+
+```bash
+# 1. Build DoorECU firmware
+cd DoorECU && cmake -B build -DCMAKE_TOOLCHAIN_FILE=toolchain-k64f.cmake && cmake --build build
+
+# 2. Set up tap interface
+sudo ip tuntap add dev tap0 mode tap && sudo ip link set tap0 up
+sudo ip addr add 172.20.0.1/16 dev tap0
+
+# 3. Start Renode
+npm run start:renode
+
+# 4. Start the bridge (separate terminal)
+npm run dev:bridge
+
+# 5. Start the frontend
+npm run dev:frontend
+```
