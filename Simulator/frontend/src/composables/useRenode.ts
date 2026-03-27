@@ -1,5 +1,5 @@
 import { ref, readonly, onUnmounted } from 'vue'
-import { type DoorEcuState, type FaultCode, type BridgeMessage, parseFaultBits } from '@/types/renode'
+import { type FaultCode, type BridgeMessage, parseFaultBits } from '@/types/renode'
 
 const WS_URL = '/ws/renode'
 

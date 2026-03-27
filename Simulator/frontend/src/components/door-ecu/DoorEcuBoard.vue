@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FaultCode } from '@/types/renode'
 
-const props = defineProps<{
+defineProps<{
   faultBits: { B1001: boolean; B1002: boolean; B1003: boolean }
   ready: boolean
   connected: boolean
