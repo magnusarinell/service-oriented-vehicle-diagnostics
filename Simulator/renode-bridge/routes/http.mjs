@@ -3,7 +3,7 @@
  */
 
 import { enqueueRpc } from '../lib/rpc.mjs'
-import { renodeReady, getFaultFlagsAddr } from '../lib/renode.mjs'
+import { renodeReady, getFaultFlagsAddr, readFaultFlags } from '../lib/renode.mjs'
 import { broadcast } from '../lib/broadcast.mjs'
 import { config } from '../config.mjs'
 
@@ -14,6 +14,12 @@ export default async function httpRoutes(fastify) {
     faultFlagsAddr: getFaultFlagsAddr()
       ? `0x${getFaultFlagsAddr().toString(16)}`
       : null,
+  }))
+
+  // Fault flags as a number — polled by SovdServer
+  fastify.get('/ecu/door-ecu/fault-flags', async () => ({
+    faultFlags: renodeReady ? (await readFaultFlags()) : 0,
+    ready: renodeReady,
   }))
 
   fastify.post('/inject-fault', async (req, reply) => {
@@ -29,7 +35,7 @@ export default async function httpRoutes(fastify) {
     const next = current | (1 << bit)
     await enqueueRpc('ExecuteCommand',
       [`sysbus WriteDoubleWord 0x${addr.toString(16)} ${next}`, config.RENODE_MACHINE])
-    broadcast({ type: 'ecm_state', faultFlags: next, ready: true })
+    broadcast({ type: 'door_ecu_state', faultFlags: next, ready: true })
     return { ok: true, faultFlags: next }
   })
 
@@ -38,7 +44,7 @@ export default async function httpRoutes(fastify) {
     if (!addr) return reply.code(503).send({ error: 'Renode not connected' })
     await enqueueRpc('ExecuteCommand',
       [`sysbus WriteDoubleWord 0x${addr.toString(16)} 0`, config.RENODE_MACHINE])
-    broadcast({ type: 'ecm_state', faultFlags: 0, ready: true })
+    broadcast({ type: 'door_ecu_state', faultFlags: 0, ready: true })
     return { ok: true }
   })
 }

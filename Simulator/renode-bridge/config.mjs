@@ -4,7 +4,7 @@
 
 export const config = {
   PORT:                   parseInt(process.env.BRIDGE_PORT          ?? '8787'),
-  RENODE_HOST:            process.env.RENODE_HOST                   ?? '127.0.0.1',
+  RENODE_HOST:            process.env.RENODE_HOST                   ?? 'localhost',
   RENODE_PORT:            parseInt(process.env.RENODE_ROBOT_PORT    ?? '55555'),
   RENODE_MACHINE:         process.env.RENODE_MACHINE                ?? 'door-ecu',
   RENODE_PING_INTERVAL_MS:parseInt(process.env.RENODE_PING_MS       ?? '3000'),

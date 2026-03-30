@@ -8,7 +8,7 @@
     "start": "concurrently --names \"renode,server,bridge,frontend\" --prefix-colors \"yellow,cyan,magenta,green\" \"npm run start:renode\" \"npm run start:server\" \"npm run start:renodebridge\" \"npm run start:frontend\"",
     "start:server": "dotnet run --project SovdServer/SovdServer.csproj",
     "start:frontend": "npm run dev --prefix Simulator/frontend",
-    "start:renode": "renode --robot-server-port 55555 --plain renode/door-ecu.resc",
+    "start:renode": "sleep 8 && renode --robot-server-port 55555 --plain --disable-xwt renode/door-ecu.resc",
     "start:renodebridge": "node Simulator/renode-bridge/index.mjs",
     "build": "npm run build:doorecu && npm run build:sovdserver && npm run build:frontend",
     "build:doorecu": "bash scripts/build_doorecu.sh",

@@ -5,9 +5,10 @@
  * Exposes `renodeReady` flag and the resolved fault_flags RAM address.
  */
 
-import { callXmlRpc } from './rpc.mjs'
+import http from 'node:http'
 import { config } from '../config.mjs'
 import { broadcast } from './broadcast.mjs'
+import { callXmlRpc } from './rpc.mjs'
 import fs from 'node:fs'
 
 export let renodeReady = false
@@ -32,6 +33,15 @@ export function resolveFaultFlagsAddr() {
 let _faultFlagsAddr = undefined
 
 export function getFaultFlagsAddr() { return _faultFlagsAddr }
+
+export async function readFaultFlags() {
+  if (!_faultFlagsAddr) return 0
+  const hex = `0x${_faultFlagsAddr.toString(16)}`
+  const r = await callXmlRpc('ExecuteCommand',
+    [`sysbus ReadDoubleWord ${hex}`, config.RENODE_MACHINE])
+  const raw = r.return?.trim() || r.output?.trim() || '0'
+  return parseInt(raw, 16) || 0
+}
 
 export async function startRenodeWatchdog() {
   async function ping() {

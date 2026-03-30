@@ -4,8 +4,8 @@ import EcuDashboard from '@/components/EcuDashboard.vue'
 import DoorEcuVisualizer from '@/components/door-ecu/DoorEcuVisualizer.vue'
 
 // Known ECUs — extend this list as more units are added
-const knownEcus = ['ecu0']
-const selectedEcu = ref(knownEcus[0])
+const knownEcus = [{ id: 'door-ecu', label: 'Door ECU' }]
+const selectedEcu = ref(knownEcus[0].id)
 </script>
 
 <template>
@@ -20,7 +20,7 @@ const selectedEcu = ref(knownEcus[0])
           v-model="selectedEcu"
           class="rounded-md border border-border bg-muted text-foreground text-sm px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option v-for="ecu in knownEcus" :key="ecu" :value="ecu">{{ ecu }}</option>
+          <option v-for="ecu in knownEcus" :key="ecu.id" :value="ecu.id">{{ ecu.label }}</option>
         </select>
       </div>
     </header>

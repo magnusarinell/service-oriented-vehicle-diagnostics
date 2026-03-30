@@ -16,7 +16,7 @@
 
 import { addClient, removeClient, broadcast } from '../lib/broadcast.mjs'
 import { enqueueRpc } from '../lib/rpc.mjs'
-import { renodeReady, getFaultFlagsAddr } from '../lib/renode.mjs'
+import { renodeReady, getFaultFlagsAddr, readFaultFlags } from '../lib/renode.mjs'
 import { config } from '../config.mjs'
 
 async function writeFaultFlags(value) {
@@ -28,15 +28,7 @@ async function writeFaultFlags(value) {
   return true
 }
 
-async function readFaultFlags() {
-  const addr = getFaultFlagsAddr()
-  if (!addr) return 0
-  const hex = `0x${addr.toString(16)}`
-  const r = await enqueueRpc('ExecuteCommand',
-    [`sysbus ReadDoubleWord ${hex}`, config.RENODE_MACHINE])
-  // output is like "0x00000004\n"
-  return parseInt(r.output?.trim() ?? '0', 16) || 0
-}
+
 
 let _currentFlags = 0
 
@@ -54,7 +46,7 @@ async function setFaultBit(bitIndex, set) {
     _currentFlags &= ~(1 << bitIndex)
   }
   await writeFaultFlags(_currentFlags)
-  broadcast({ type: 'ecm_state', faultFlags: _currentFlags, ready: renodeReady })
+  broadcast({ type: 'door_ecu_state', faultFlags: _currentFlags, ready: renodeReady })
 }
 
 export default async function wsRoute(fastify) {

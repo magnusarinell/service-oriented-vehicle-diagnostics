@@ -35,9 +35,9 @@ function parseRpcResponse(xml) {
     const msg = xml.match(/<string>([\s\S]*?)<\/string>/)?.[1] ?? 'unknown fault'
     return { status: 'FAIL', error: msg }
   }
-  const status = xml.match(/<member>\s*<name>status<\/name>\s*<value><string>(.*?)<\/string>/)?.[1] ?? 'FAIL'
-  const output = xml.match(/<member>\s*<name>output<\/name>\s*<value><string>([\s\S]*?)<\/string>/)?.[1] ?? ''
-  const ret    = xml.match(/<member>\s*<name>return<\/name>\s*<value><string>([\s\S]*?)<\/string>/)?.[1] ?? ''
+  const status = xml.match(/<member>\s*<name>status<\/name>\s*<value>\s*<string>(.*?)<\/string>/)?.[1] ?? 'FAIL'
+  const output = xml.match(/<member>\s*<name>output<\/name>\s*<value>\s*<string>([\s\S]*?)<\/string>/)?.[1] ?? ''
+  const ret    = xml.match(/<member>\s*<name>return<\/name>\s*<value>\s*<string>([\s\S]*?)<\/string>/)?.[1] ?? ''
   return { status, output, return: ret }
 }
 

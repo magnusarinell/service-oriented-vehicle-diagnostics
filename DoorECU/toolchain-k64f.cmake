@@ -12,7 +12,7 @@ set(CPU_FLAGS "-mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard")
 
 set(CMAKE_C_FLAGS_INIT   "${CPU_FLAGS} -ffunction-sections -fdata-sections -Wall")
 set(CMAKE_CXX_FLAGS_INIT "${CPU_FLAGS} -ffunction-sections -fdata-sections -Wall")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "${CPU_FLAGS} -Wl,--gc-sections -Wl,-Map=door-ecu-firmware.map -specs=nosys.specs -specs=nano.specs")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "${CPU_FLAGS} -Wl,--gc-sections -Wl,-Map=door-ecu-firmware.map -specs=nosys.specs -specs=nano.specs -T${CMAKE_CURRENT_LIST_DIR}/mk64f12.ld")
 
 # Skip compiler sanity checks for cross-compilers (avoids linker test failures)
 set(CMAKE_C_COMPILER_WORKS   1 CACHE INTERNAL "")

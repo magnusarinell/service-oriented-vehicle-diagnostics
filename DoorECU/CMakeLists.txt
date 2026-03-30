@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(door-ecu-firmware C)
+project(door-ecu-firmware C ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -47,6 +47,7 @@ set(LWIP_SOURCES
 )
 
 add_executable(door-ecu-firmware
+    src/startup_mk64f12.S
     src/main.c
     src/diag_data.c
     src/someip.c
