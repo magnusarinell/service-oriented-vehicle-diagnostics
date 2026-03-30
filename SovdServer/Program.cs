@@ -18,7 +18,7 @@ else
 // CORS for local frontend dev
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p
-        .WithOrigins("http://localhost:5173")
+        .WithOrigins("http://localhost:5174")
         .AllowAnyHeader()
         .AllowAnyMethod()));
 

@@ -7,7 +7,9 @@
 #include <stdio.h>
 
 /* Board-specific ethernet/netif bringup (implemented in port/ethernetif.c) */
-extern void ethernetif_init_board(struct netif *netif);
+#include "lwip/err.h"
+extern err_t ethernetif_init_board(struct netif *netif);
+extern void  ethernetif_input(struct netif *netif);
 
 static struct netif g_netif;
 

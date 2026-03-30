@@ -7,10 +7,22 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # ── Cross-compile toolchain must be set via -DCMAKE_TOOLCHAIN_FILE=toolchain-k64f.cmake
 # ── or toolchain-native.cmake for host-build tests.
 
-set(LWIP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lwip)
+# ── Fetch LwIP ───────────────────────────────────────────────────────────────
+include(FetchContent)
+FetchContent_Declare(
+    lwip
+    GIT_REPOSITORY https://github.com/lwip-tcpip/lwip.git
+    GIT_TAG        STABLE-2_2_0_RELEASE
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(lwip)
+set(LWIP_DIR ${lwip_SOURCE_DIR})
 
 # LwIP sources (minimal: core + IPv4 + ethernet)
 set(LWIP_SOURCES
+    ${LWIP_DIR}/src/core/def.c
+    ${LWIP_DIR}/src/core/inet_chksum.c
+    ${LWIP_DIR}/src/core/ip.c
     ${LWIP_DIR}/src/core/init.c
     ${LWIP_DIR}/src/core/mem.c
     ${LWIP_DIR}/src/core/memp.c
