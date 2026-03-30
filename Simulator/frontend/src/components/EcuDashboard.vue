@@ -12,18 +12,27 @@ const activeTab = ref<Tab>('data')
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'data',       label: 'Live Data' },
-  { id: 'faults',     label: 'Faults' },
+  { id: 'faults',     label: 'DTCs' },
   { id: 'operations', label: 'Operations' },
 ]
 </script>
 
 <template>
-  <div class="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
-    <!-- Header -->
-    <div class="px-6 py-4 border-b border-border flex items-center justify-between gap-4">
-      <div>
-        <h1 class="font-bold text-xl">{{ ecuId }}</h1>
-        <CapabilityBadges :ecu-id="ecuId" class="mt-1" />
+  <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+    <!-- SOVD Explorer header -->
+    <div class="px-6 py-4 border-b border-border bg-muted/30">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">SOVD Explorer</span>
+          </div>
+          <div class="flex items-center gap-2 font-mono text-sm">
+            <span class="font-semibold text-foreground">{{ ecuId }}</span>
+            <span class="text-muted-foreground">·</span>
+            <span class="text-muted-foreground text-xs">/api/v1/ecu/{{ ecuId }}</span>
+          </div>
+        </div>
+        <CapabilityBadges :ecu-id="ecuId" class="mt-1 shrink-0" />
       </div>
     </div>
 
@@ -44,8 +53,8 @@ const tabs: { id: Tab; label: string }[] = [
 
     <!-- Tab content -->
     <div class="p-6">
-      <DataPanel      v-if="activeTab === 'data'"       :ecu-id="ecuId" />
-      <FaultList      v-else-if="activeTab === 'faults'"    :ecu-id="ecuId" />
+      <DataPanel      v-if="activeTab === 'data'"        :ecu-id="ecuId" />
+      <FaultList      v-else-if="activeTab === 'faults'"     :ecu-id="ecuId" />
       <OperationPanel v-else-if="activeTab === 'operations'" :ecu-id="ecuId" />
     </div>
   </div>

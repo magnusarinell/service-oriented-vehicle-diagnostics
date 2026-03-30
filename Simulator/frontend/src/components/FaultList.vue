@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useEcu } from '@/composables/useEcu'
+import { useRenode } from '@/composables/useRenode'
 import type { SovdFault } from '@/types/sovd'
 
 const props = defineProps<{ ecuId: string }>()
@@ -22,18 +23,20 @@ async function handleClear() {
 }
 
 const severityClass: Record<string, string> = {
-  high:   'bg-red-900/60 text-red-300 border-red-700',
-  medium: 'bg-yellow-900/60 text-yellow-300 border-yellow-700',
-  low:    'bg-blue-900/60 text-blue-300 border-blue-700',
+  high:   'bg-red-50 text-red-700 border-red-200',
+  medium: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  low:    'bg-blue-50 text-blue-700 border-blue-200',
 }
 
 const statusClass: Record<string, string> = {
-  active:   'text-red-400',
-  pending:  'text-yellow-400',
-  inactive: 'text-muted-foreground',
+  active:   'text-red-600',
+  pending:  'text-yellow-600',
+  inactive: 'text-gray-400',
 }
 
+const renode = useRenode()
 onMounted(load)
+watch(renode.faultFlags, load)
 </script>
 
 <template>
@@ -49,7 +52,7 @@ onMounted(load)
       </button>
     </div>
 
-    <p v-if="clearMessage" class="text-sm text-green-400">{{ clearMessage }}</p>
+    <p v-if="clearMessage" class="text-sm text-green-600">{{ clearMessage }}</p>
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <div v-if="loading" class="text-muted-foreground text-sm animate-pulse">Loading…</div>

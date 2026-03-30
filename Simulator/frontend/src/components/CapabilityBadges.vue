@@ -9,9 +9,9 @@ const { fetchCapabilities } = useEcu(props.ecuId)
 const capabilities = ref<SovdCapability[]>([])
 
 const categoryClass: Record<string, string> = {
-  'read':       'bg-blue-900/50 text-blue-300 border-blue-700',
-  'read-write': 'bg-purple-900/50 text-purple-300 border-purple-700',
-  'execute':    'bg-green-900/50 text-green-300 border-green-700',
+  'read':       'bg-blue-50 text-blue-700 border-blue-200',
+  'read-write': 'bg-purple-50 text-purple-700 border-purple-200',
+  'execute':    'bg-green-50 text-green-700 border-green-200',
 }
 
 onMounted(async () => {
