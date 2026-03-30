@@ -1,8 +1,22 @@
 using SovdServer.Models;
 using SovdServer.Gateway;
+using SovdServer.Logging;
 using Microsoft.AspNetCore.Http.Json;
+using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateSlimBuilder(args);
+
+// ── Broadcast logger (SSE on /api/v1/logs/stream) ─────────────────────
+var broadcaster = new LogBroadcaster();
+builder.Services.AddSingleton(broadcaster);
+builder.Logging.ClearProviders();
+builder.Logging.AddProvider(new BroadcastLoggerProvider(broadcaster));
+// Only show warnings+ on stdout to keep the terminal quiet
+builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+builder.Logging.AddConsole();
+builder.Logging.AddFilter<Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider>("Microsoft.AspNetCore.Routing", LogLevel.None);
+builder.Logging.AddFilter<Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider>("Microsoft.AspNetCore.Hosting", LogLevel.None);
 
 // AOT-compatible JSON serialisation
 builder.Services.Configure<JsonOptions>(opt =>
@@ -25,6 +39,35 @@ builder.Services.AddCors(opt =>
 var app = builder.Build();
 
 app.UseCors();
+
+// ── SSE log stream  GET /api/v1/logs/stream ───────────────────────────
+app.MapGet("/api/v1/logs/stream", async (LogBroadcaster logs, HttpContext ctx, CancellationToken ct) =>
+{
+    ctx.Response.ContentType = "text/event-stream";
+    ctx.Response.Headers.CacheControl = "no-cache";
+    ctx.Response.Headers.Connection   = "keep-alive";
+
+    var (history, channel) = logs.Subscribe();
+    try
+    {
+        // Replay buffered history first
+        foreach (var e in history)
+        {
+            await ctx.Response.WriteAsync(
+                $"data: {JsonSerializer.Serialize(e, SovdSerializationContext.Default.LogEntry)}\n\n", ct);
+        }
+        await ctx.Response.Body.FlushAsync(ct);
+
+        // Then stream live
+        await foreach (var e in channel.Reader.ReadAllAsync(ct))
+        {
+            await ctx.Response.WriteAsync(
+                $"data: {JsonSerializer.Serialize(e, SovdSerializationContext.Default.LogEntry)}\n\n", ct);
+            await ctx.Response.Body.FlushAsync(ct);
+        }
+    }
+    finally { logs.Release(channel); }
+});
 
 // ──────────────────────────────────────────────
 //  SOVD REST routes   /api/v1/ecu/{ecuId}/...

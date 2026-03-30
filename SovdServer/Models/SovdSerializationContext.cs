@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using SovdServer.Models;
+using SovdServer.Logging;
 
 namespace SovdServer.Models;
 
@@ -18,4 +19,5 @@ namespace SovdServer.Models;
 [JsonSerializable(typeof(SovdOperationRequest))]
 [JsonSerializable(typeof(SovdOperationResult))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
+[JsonSerializable(typeof(LogEntry))]
 internal partial class SovdSerializationContext : JsonSerializerContext { }

@@ -56,16 +56,57 @@ internal sealed class InMemoryEcuGateway : IEcuGateway
         catch { return 0; }
     }
 
+    private async Task<(int lockState, int windowPos, int mirrorAngle, int doorAjar)?> GetSensorsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var json = await Http.GetStringAsync($"{BridgeBase}/ecu/door-ecu/sensors", ct);
+            using var doc = JsonDocument.Parse(json);
+            var r = doc.RootElement;
+            return (
+                r.GetProperty("lock_state").GetInt32(),
+                r.GetProperty("window_pos").GetInt32(),
+                r.GetProperty("mirror_angle").GetInt32(),
+                r.GetProperty("door_ajar").GetInt32()
+            );
+        }
+        catch { return null; }
+    }
+
+    private async Task WriteSensorFieldAsync(string field, int value, CancellationToken ct)
+    {
+        try
+        {
+            var body = new StringContent(
+                $"{{\"value\":{value}}}",
+                System.Text.Encoding.UTF8, "application/json");
+            await Http.PostAsync($"{BridgeBase}/ecu/door-ecu/sensors/{field}", body, ct);
+        }
+        catch { }
+    }
+
     public Task<List<SovdCapability>> GetCapabilitiesAsync(string ecuId, CancellationToken ct = default) =>
         Task.FromResult(IsKnownEcu(ecuId) ? Capabilities : []);
 
-    public Task<List<SovdDataItem>> ReadDataAsync(string ecuId, CancellationToken ct = default) =>
-        Task.FromResult(IsKnownEcu(ecuId) ? DataItems : []);
-
-    public Task<SovdDataItem?> ReadDataItemAsync(string ecuId, string dataId, CancellationToken ct = default)
+    public async Task<List<SovdDataItem>> ReadDataAsync(string ecuId, CancellationToken ct = default)
     {
-        if (!IsKnownEcu(ecuId)) return Task.FromResult<SovdDataItem?>(null);
-        return Task.FromResult(DataItems.FirstOrDefault(d => d.Id == dataId));
+        if (!IsKnownEcu(ecuId)) return [];
+        var s = await GetSensorsAsync(ct);
+        if (s is null) return DataItems;
+        return
+        [
+            new("lock_state",   "Door Lock State",   s.Value.lockState   == 0 ? "unlocked" : "locked", ""),
+            new("window_pos",   "Window Position",   s.Value.windowPos.ToString(), "%"),
+            new("mirror_angle", "Mirror Angle",      s.Value.mirrorAngle.ToString(), "deg"),
+            new("door_ajar",    "Door Ajar Sensor",  s.Value.doorAjar    == 0 ? "false" : "true", ""),
+        ];
+    }
+
+    public async Task<SovdDataItem?> ReadDataItemAsync(string ecuId, string dataId, CancellationToken ct = default)
+    {
+        if (!IsKnownEcu(ecuId)) return null;
+        var all = await ReadDataAsync(ecuId, ct);
+        return all.FirstOrDefault(d => d.Id == dataId);
     }
 
     public async Task<List<SovdFault>> GetFaultsAsync(string ecuId, CancellationToken ct = default)
@@ -88,19 +129,25 @@ internal sealed class InMemoryEcuGateway : IEcuGateway
     public Task<List<SovdOperation>> GetOperationsAsync(string ecuId, CancellationToken ct = default) =>
         Task.FromResult(IsKnownEcu(ecuId) ? Operations : []);
 
-    public Task<SovdOperationResult> ExecuteOperationAsync(
+    public async Task<SovdOperationResult> ExecuteOperationAsync(
         string ecuId, string operationId, SovdOperationRequest request, CancellationToken ct = default)
     {
         if (!IsKnownEcu(ecuId))
-            return Task.FromResult(new SovdOperationResult("error", "Unknown ECU", null));
+            return new SovdOperationResult("error", "Unknown ECU", null);
 
-        var result = operationId switch
+        switch (operationId)
         {
-            "unlock_door"  => new SovdOperationResult("ok", "Door unlock command sent", null),
-            "reset_window" => new SovdOperationResult("ok", "Window re-calibration started", null),
-            _ => new SovdOperationResult("error", $"Unknown operation: {operationId}", null),
-        };
-        return Task.FromResult(result);
+            case "unlock_door":
+                await WriteSensorFieldAsync("lock_state", 0, ct);
+                return new SovdOperationResult("ok", "Door unlocked", null);
+
+            case "reset_window":
+                await WriteSensorFieldAsync("window_pos", 100, ct);
+                return new SovdOperationResult("ok", "Window re-calibration started", null);
+
+            default:
+                return new SovdOperationResult("error", $"Unknown operation: {operationId}", null);
+        }
     }
 }
 

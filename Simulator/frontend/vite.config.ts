@@ -15,6 +15,12 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        // Disable response buffering so SSE (text/event-stream) flows immediately
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes) => {
+            proxyRes.headers['x-accel-buffering'] = 'no'
+          })
+        },
       },
       '/ws/renode': {
         target: 'ws://localhost:8787',

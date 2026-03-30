@@ -3,9 +3,12 @@
  */
 
 import { enqueueRpc } from '../lib/rpc.mjs'
-import { renodeReady, getFaultFlagsAddr, readFaultFlags } from '../lib/renode.mjs'
+import { renodeReady, getFaultFlagsAddr, readFaultFlags, getSensorsAddr, readSensors, writeSensorByte } from '../lib/renode.mjs'
 import { broadcast } from '../lib/broadcast.mjs'
 import { config } from '../config.mjs'
+
+// Sensor struct offsets (must match DoorECU/src/diag_data.h)
+const SENSOR_OFFSET = { lock_state: 0, window_pos: 1, mirror_angle: 2, door_ajar: 3 }
 
 export default async function httpRoutes(fastify) {
   fastify.get('/health', async () => ({
@@ -37,6 +40,26 @@ export default async function httpRoutes(fastify) {
       [`sysbus WriteDoubleWord 0x${addr.toString(16)} ${next}`, config.RENODE_MACHINE])
     broadcast({ type: 'door_ecu_state', faultFlags: next, ready: true })
     return { ok: true, faultFlags: next }
+  })
+
+  // Sensor data — polled by SovdServer ReadDataAsync
+  fastify.get('/ecu/door-ecu/sensors', async (_req, reply) => {
+    if (!renodeReady) return reply.code(503).send({ error: 'Renode not connected' })
+    const sensors = await readSensors()
+    if (!sensors) return reply.code(503).send({ error: 'Sensor address not resolved' })
+    return sensors
+  })
+
+  // Write a single sensor field by name
+  fastify.post('/ecu/door-ecu/sensors/:field', async (req, reply) => {
+    const { field } = req.params
+    const offset = SENSOR_OFFSET[field]
+    if (offset === undefined) return reply.code(400).send({ error: `Unknown sensor field: ${field}` })
+    if (!renodeReady || !getSensorsAddr()) return reply.code(503).send({ error: 'Renode not connected' })
+    const { value } = req.body ?? {}
+    if (value === undefined || value === null) return reply.code(400).send({ error: 'value required' })
+    await writeSensorByte(offset, Number(value))
+    return { ok: true, field, value: Number(value) }
   })
 
   fastify.post('/restore', async (_req, reply) => {

@@ -21,6 +21,7 @@ interface TreeNode {
   badge?: string
   children?: TreeNode[]
   infoOnly?: boolean
+  placeholder?: boolean
 }
 
 // ── Remote data ───────────────────────────────────────────────────────
@@ -74,75 +75,106 @@ onUnmounted(() => Object.values(subTimers).forEach(t => clearInterval(t)))
 const base = computed(() => `/api/v1/ecu/${props.ecuId}`)
 
 const tree = computed<TreeNode>(() => ({
-  key: 'root',
-  label: props.ecuId,
-  url: base.value,
+  key:   'ecus',
+  label: 'ecu',
+  url:   '/api/v1/ecu',
+  method: 'GET',
   children: [
     {
-      key: 'capabilities',
-      label: 'capabilities',
-      url: `${base.value}/capabilities`,
+      key:    props.ecuId,
+      label:  props.ecuId,
+      url:    base.value,
       method: 'GET',
-    },
-    {
-      key: 'data',
-      label: 'data',
-      url: `${base.value}/data`,
-      method: 'GET',
-      canSubscribe: true,
-      children: dataItems.value.map(item => ({
-        key:         `data.${item.id}`,
-        label:       item.id,
-        url:         `${base.value}/data/${item.id}`,
-        method:      'GET' as const,
-        description: `${item.value} ${item.unit}`.trim(),
-        canSubscribe: true,
-      })),
-    },
-    {
-      key: 'faults',
-      label: 'faults',
-      url:  `${base.value}/faults`,
-      method: 'GET',
-      canSubscribe: true,
       children: [
-        ...faults.value.map(f => ({
-          key:         `fault.${f.code}`,
-          label:       f.code,
-          url:         `${base.value}/faults`,
-          description: f.description,
-          badge:       f.status,
-          severity:    f.severity,
-          infoOnly:    true,
-        })),
         {
-          key:         'faults.clear',
-          label:       'clear',
+          key:   'capabilities',
+          label: 'capabilities',
+          url:   `${base.value}/capabilities`,
+          method: 'GET',
+        },
+        {
+          key:         'data',
+          label:       'data',
+          url:         `${base.value}/data`,
+          method:      'GET',
+          canSubscribe: true,
+          children: dataItems.value.map(item => ({
+            key:          `data.${item.id}`,
+            label:        item.id,
+            url:          `${base.value}/data/${item.id}`,
+            method:       'GET' as const,
+            description:  `${item.value} ${item.unit}`.trim(),
+            canSubscribe: true,
+          })),
+        },
+        {
+          key:         'faults',
+          label:       'faults',
           url:         `${base.value}/faults`,
-          method:      'DELETE' as const,
-          description: 'Clear all stored fault codes',
+          method:      'GET',
+          canSubscribe: true,
+          children: [
+            ...faults.value.map(f => ({
+              key:         `fault.${f.code}`,
+              label:       f.code,
+              url:         `${base.value}/faults`,
+              description: f.description,
+              badge:       f.status,
+              severity:    f.severity,
+              infoOnly:    true,
+            })),
+            {
+              key:         'faults.clear',
+              label:       'clear',
+              url:         `${base.value}/faults`,
+              method:      'DELETE' as const,
+              description: 'Clear all stored fault codes',
+            },
+          ],
+        },
+        {
+          key:    'operations',
+          label:  'operations',
+          url:    `${base.value}/operations`,
+          method: 'GET',
+          children: operations.value.map(op => ({
+            key:         `op.${op.id}`,
+            label:       op.id,
+            url:         `${base.value}/operations/${op.id}/execute`,
+            method:      'POST' as const,
+            description: op.name,
+          })),
         },
       ],
     },
     {
-      key: 'operations',
-      label: 'operations',
-      url:  `${base.value}/operations`,
-      method: 'GET',
-      children: operations.value.map(op => ({
-        key:         `op.${op.id}`,
-        label:       op.id,
-        url:         `${base.value}/operations/${op.id}/execute`,
-        method:      'POST' as const,
-        description: op.name,
-      })),
+      key:         'apps',
+      label:       'apps',
+      url:         '/api/v1/apps',
+      method:      'GET',
+      placeholder: true,
+    },
+    {
+      key:         'functions',
+      label:       'functions',
+      url:         '/api/v1/functions',
+      method:      'GET',
+      placeholder: true,
     },
   ],
 }))
 
 // ── Tree UI state ─────────────────────────────────────────────────────
-const expanded   = ref<Record<string, boolean>>({ root: true, faults: true })
-const selectedKey = ref<string | null>(null)
+// Collect all node keys to expand everything by default
+function allKeys(node: TreeNode): string[] {
+  return [node.key, ...(node.children ?? []).flatMap(allKeys)]
+}
+const expanded    = ref<Record<string, boolean>>({})
+watch(tree, (t) => {
+  const keys = allKeys(t)
+  for (const k of keys) if (expanded.value[k] === undefined) expanded.value[k] = true
+}, { immediate: true })
+const selectedKey = ref<string | null>(props.ecuId)
 
 // Flatten tree for O(1) rendering (no recursion in template)
 interface FlatNode { node: TreeNode; depth: number }
@@ -158,10 +190,13 @@ const flatTree = computed<FlatNode[]>(() => {
   return result
 })
 
+function toggleExpand(node: TreeNode, e: Event) {
+  e.stopPropagation()
+  expanded.value = { ...expanded.value, [node.key]: !expanded.value[node.key] }
+}
+
 function handleNodeClick(node: TreeNode) {
-  if (node.children?.length) {
-    expanded.value = { ...expanded.value, [node.key]: !expanded.value[node.key] }
-  }
+  if (node.placeholder) return
   selectedKey.value = node.key
   response.value    = null
   requestBody.value = node.method === 'POST' ? '{\n\n}' : ''
@@ -228,13 +263,11 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
 </script>
 
 <template>
-  <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+  <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden" style="max-width: 820px;">
 
     <!-- ── Header ─────────────────────────────────────────────────── -->
     <div class="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
       <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">SOVD Explorer</span>
-      <span class="text-muted-foreground text-[11px]">·</span>
-      <code class="text-xs text-muted-foreground font-mono">/api/v1/ecu/{{ ecuId }}</code>
       <div v-if="anySubscribed" class="ml-auto flex items-center gap-1.5 text-[11px] text-orange-600 font-medium">
         <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
         SSE polling active
@@ -242,10 +275,10 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
     </div>
 
     <!-- ── Body: tree left + request/response right ───────────────── -->
-    <div class="flex divide-x divide-border" style="min-height: 440px; max-height: 640px;">
+    <div class="flex divide-x divide-border" style="min-height: 500px; max-height: 700px; max-width: 780px;">
 
       <!-- ── Object Dictionary ────────────────────────────────────── -->
-      <div class="w-72 shrink-0 overflow-y-auto bg-muted/10 flex flex-col">
+      <div class="w-64 shrink-0 overflow-y-auto bg-muted/10 flex flex-col">
         <div class="px-4 py-2 border-b border-border bg-muted/20">
           <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
             Object Dictionary
@@ -260,29 +293,37 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
             :class="[
               selectedKey === node.key
                 ? 'bg-primary/10 text-primary'
-                : node.infoOnly
-                  ? 'text-muted-foreground hover:bg-muted/30'
-                  : 'hover:bg-muted/50 text-foreground',
+                : node.placeholder
+                  ? 'text-muted-foreground/40 cursor-default'
+                  : node.infoOnly
+                    ? 'text-muted-foreground hover:bg-muted/30'
+                    : 'hover:bg-muted/50 text-foreground',
             ]"
             :style="{ paddingLeft: `${10 + depth * 14}px` }"
             @click="handleNodeClick(node)"
           >
             <!-- Expand / leaf indicator -->
-            <span class="w-3 shrink-0 text-center text-muted-foreground leading-none" style="font-size:10px">
-              <template v-if="node.children?.length">{{ expanded[node.key] ? '▾' : '▸' }}</template>
-              <template v-else-if="node.severity">
-                <span class="inline-block w-2 h-2 rounded-full" :class="severityDot(node.severity)" />
-              </template>
-              <template v-else>
-                <span class="text-muted-foreground/30">·</span>
-              </template>
+            <button
+              v-if="node.children?.length"
+              class="shrink-0 w-5 h-5 flex items-center justify-center rounded border border-border bg-muted hover:bg-accent text-muted-foreground text-[11px] font-bold transition-colors"
+              @click.stop="toggleExpand(node, $event)"
+            >{{ expanded[node.key] ? '▾' : '▸' }}</button>
+            <span v-else-if="node.severity" class="w-5 shrink-0 flex items-center justify-center">
+              <span class="inline-block w-2 h-2 rounded-full" :class="severityDot(node.severity)" />
             </span>
+            <span v-else class="w-5 shrink-0 text-center text-muted-foreground/30 text-[10px]">·</span>
 
             <!-- Label -->
             <span
               class="flex-1 font-mono truncate"
               :class="depth === 0 ? 'font-semibold text-foreground' : ''"
             >{{ node.label }}</span>
+
+            <!-- Placeholder badge -->
+            <span
+              v-if="node.placeholder"
+              class="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground/50 border border-border font-mono"
+            >planned</span>
 
             <!-- Description (value for data items / fault desc on hover) -->
             <span
@@ -299,7 +340,7 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
 
             <!-- Method badge (when not subscribable) -->
             <span
-              v-if="node.method && !node.canSubscribe"
+              v-if="node.method && !node.canSubscribe && !node.placeholder"
               class="shrink-0 text-[9px] font-bold px-1 py-0.5 rounded border font-mono"
               :class="methodColor(node.method)"
             >{{ node.method }}</span>
@@ -335,8 +376,9 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
           <span class="text-sm">Select a resource in the Object Dictionary</span>
         </div>
 
-        <div v-else class="flex-1 overflow-y-auto p-5 space-y-4">
-
+        <div v-else class="flex-1 flex flex-col overflow-hidden">
+          <!-- Top: URL bar + body + button -->
+          <div class="p-5 pb-3 space-y-3 shrink-0 border-b border-border">
           <!-- URL bar -->
           <div class="flex items-center gap-2 bg-gray-50 border border-border rounded-lg px-4 py-2.5 font-mono">
             <span
@@ -409,21 +451,31 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
               {{ requesting ? 'Sending…' : `▶ Send ${selectedNode.method ?? 'GET'}` }}
             </button>
           </div>
+          </div><!-- end top section -->
 
-          <!-- ── Response ───────────────────────────────────────────── -->
-          <div v-if="response && !selectedNode.infoOnly" class="space-y-1.5">
-            <div class="flex items-center gap-2">
+          <!-- Response — fills remaining height, always visible -->
+          <div v-if="!selectedNode.infoOnly" class="flex-1 flex flex-col min-h-0 px-5 pt-3 pb-5">
+            <div class="flex items-center gap-2 mb-1.5">
               <p class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Response</p>
-              <span
-                class="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded border"
-                :class="response.status >= 200 && response.status < 300
-                  ? 'bg-green-50 text-green-700 border-green-200'
-                  : 'bg-red-50 text-red-700 border-red-200'"
-              >{{ response.status || 'ERR' }}</span>
-              <span class="text-[11px] font-mono text-muted-foreground">{{ response.ms }} ms</span>
-              <span class="text-[11px] text-muted-foreground ml-auto">{{ response.ts }}</span>
+              <template v-if="response">
+                <span
+                  class="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded border"
+                  :class="response.status >= 200 && response.status < 300
+                    ? 'bg-green-50 text-green-700 border-green-200'
+                    : 'bg-red-50 text-red-700 border-red-200'"
+                >{{ response.status || 'ERR' }}</span>
+                <span class="text-[11px] font-mono text-muted-foreground">{{ response.ms }} ms</span>
+                <span class="text-[11px] text-muted-foreground ml-auto">{{ response.ts }}</span>
+              </template>
             </div>
-            <pre class="text-xs bg-gray-50 border border-border rounded-lg px-4 py-3 font-mono overflow-x-auto max-h-72 whitespace-pre-wrap">{{ response.body !== null ? JSON.stringify(response.body, null, 2) : '(empty)' }}</pre>
+            <pre
+              class="flex-1 min-h-0 overflow-y-auto text-xs bg-gray-50 border border-border rounded-lg px-4 py-3 font-mono whitespace-pre-wrap"
+              :class="response ? 'text-foreground' : 'text-muted-foreground/50 italic'"
+            >{{ response?.body !== undefined && response.body !== null
+              ? JSON.stringify(response.body, null, 2)
+              : response?.body === null
+                ? '(empty response)'
+                : '' }}</pre>
           </div>
 
         </div>
