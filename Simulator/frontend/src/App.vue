@@ -27,20 +27,20 @@ const ECU_ID = 'door-ecu'
       <div class="w-[640px] shrink-0 overflow-y-auto bg-muted/5 p-4 space-y-2">
         <SovdServerPanel />
 
-        <!-- Communication: D-Bus / HTTP REST -->
-        <div class="flex items-center gap-2 px-2 py-1">
-          <div class="flex-1 border-t border-dashed border-gray-300" />
-          <span class="text-[10px] font-mono text-gray-400 uppercase tracking-wider shrink-0">HTTP · SOVD API</span>
-          <div class="flex-1 border-t border-dashed border-gray-300" />
+        <!-- Communication: D-Bus + SOME/IP (HPC internal) -->
+        <div class="flex items-center gap-2 px-2 py-1 opacity-40">
+          <div class="flex-1 border-t border-dashed border-gray-400" />
+          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">D-Bus · SOME/IP</span>
+          <div class="flex-1 border-t border-dashed border-gray-400" />
         </div>
 
         <ZoneControllerCard />
 
-        <!-- Communication: SOME/IP -->
-        <div class="flex items-center gap-2 px-2 py-1">
-          <div class="flex-1 border-t border-dashed border-gray-300" />
-          <span class="text-[10px] font-mono text-gray-400 uppercase tracking-wider shrink-0">SOME/IP</span>
-          <div class="flex-1 border-t border-dashed border-gray-300" />
+        <!-- Communication: UDS -->
+        <div class="flex items-center gap-2 px-2 py-1 opacity-40">
+          <div class="flex-1 border-t border-dashed border-gray-400" />
+          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">UDS · CAN / LIN</span>
+          <div class="flex-1 border-t border-dashed border-gray-400" />
         </div>
 
         <DoorEcuCard />
