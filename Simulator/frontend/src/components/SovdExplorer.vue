@@ -263,16 +263,19 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
 </script>
 
 <template>
-  <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden" style="max-width: 820px;">
+  <div style="max-width: 820px;">
 
-    <!-- ── Header ─────────────────────────────────────────────────── -->
-    <div class="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+    <!-- ── Title (outside card) ───────────────────────────────────── -->
+    <div class="flex items-center gap-3 mb-2">
       <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">SOVD Explorer</span>
       <div v-if="anySubscribed" class="ml-auto flex items-center gap-1.5 text-[11px] text-orange-600 font-medium">
         <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
         SSE polling active
       </div>
     </div>
+
+    <!-- ── Card body ──────────────────────────────────────────────── -->
+    <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
 
     <!-- ── Body: tree left + request/response right ───────────────── -->
     <div class="flex divide-x divide-border" style="min-height: 500px; max-height: 700px; max-width: 780px;">
@@ -481,5 +484,6 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
         </div>
       </div>
     </div>
+    </div><!-- end card -->
   </div>
 </template>

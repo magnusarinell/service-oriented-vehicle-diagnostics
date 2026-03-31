@@ -12,9 +12,9 @@ var broadcaster = new LogBroadcaster();
 builder.Services.AddSingleton(broadcaster);
 builder.Logging.ClearProviders();
 builder.Logging.AddProvider(new BroadcastLoggerProvider(broadcaster));
-// Only show warnings+ on stdout to keep the terminal quiet
-builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+// Suppress noisy framework logs on the console only – broadcaster sees everything at Info+
 builder.Logging.AddConsole();
+builder.Logging.AddFilter<Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider>("Microsoft", LogLevel.Warning);
 builder.Logging.AddFilter<Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider>("Microsoft.AspNetCore.Routing", LogLevel.None);
 builder.Logging.AddFilter<Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider>("Microsoft.AspNetCore.Hosting", LogLevel.None);
 
