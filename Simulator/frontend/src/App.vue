@@ -19,8 +19,8 @@ const ECU_ID = 'door-ecu'
 
     <main class="flex-1 flex gap-0 overflow-hidden" style="height: calc(100vh - 72px);">
       <!-- Left: SOVD Explorer -->
-      <div class="shrink-0 overflow-y-auto p-6 pt-4" style="width: 860px;">
-        <SovdExplorer :ecu-id="ECU_ID" />
+      <div class="shrink-0 flex flex-col p-6 pt-4 min-h-0" style="width: 860px;">
+        <SovdExplorer class="flex-1 min-h-0" :ecu-id="ECU_ID" />
       </div>
 
       <!-- Right: SOVD Server + ECUs -->

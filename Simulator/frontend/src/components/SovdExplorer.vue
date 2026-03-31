@@ -263,7 +263,7 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
 </script>
 
 <template>
-  <div style="max-width: 820px;">
+  <div class="flex flex-col flex-1 min-h-0" style="max-width: 820px;">
 
     <!-- ── Title (outside card) ───────────────────────────────────── -->
     <div class="flex items-center gap-3 mb-2">
@@ -275,10 +275,10 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
     </div>
 
     <!-- ── Card body ──────────────────────────────────────────────── -->
-    <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+    <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
 
     <!-- ── Body: tree left + request/response right ───────────────── -->
-    <div class="flex divide-x divide-border" style="min-height: 500px; max-height: 700px; max-width: 780px;">
+    <div class="flex divide-x divide-border flex-1 min-h-0" style="max-width: 780px;">
 
       <!-- ── Object Dictionary ────────────────────────────────────── -->
       <div class="w-64 shrink-0 overflow-y-auto bg-muted/10 flex flex-col">
