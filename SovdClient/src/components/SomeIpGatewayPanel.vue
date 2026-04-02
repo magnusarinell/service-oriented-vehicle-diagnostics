@@ -5,7 +5,7 @@ const gw = useGatewayEvents()
 </script>
 
 <template>
-  <div class="rounded-lg border border-border bg-card overflow-hidden">
+  <div class="border-t border-border bg-card overflow-hidden">
     <div class="px-4 py-3 flex items-center gap-3">
       <!-- Pulse indicator -->
       <div class="relative shrink-0">

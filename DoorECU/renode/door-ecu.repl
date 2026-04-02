@@ -1,4 +1,0 @@
-// door-ecu.repl -- NXP FRDM-K64F platform description for SOVD DoorECU
-// Extends the built-in Renode K64F model.
-
-using "platforms/cpus/nxp-k6xf.repl"

@@ -3,7 +3,6 @@ import SovdExplorer         from '@/components/SovdExplorer.vue'
 import SovdServerPanel      from '@/components/SovdServerPanel.vue'
 import SomeIpGatewayPanel   from '@/components/SomeIpGatewayPanel.vue'
 import ZoneControllerCard   from '@/components/ZoneControllerCard.vue'
-import DoorEcuCard          from '@/components/DoorEcuCard.vue'
 
 const ECU_ID = 'zone-controller'
 </script>
@@ -26,17 +25,25 @@ const ECU_ID = 'zone-controller'
 
       <!-- Right: SOVD Server + ECUs -->
       <div class="w-[640px] shrink-0 overflow-y-auto bg-muted/5 p-4 space-y-2">
-        <SovdServerPanel />
-
-        <!-- D-Bus connection -->
-        <div class="flex items-center gap-2 px-2 py-1 opacity-40">
-          <div class="flex-1 border-t border-dashed border-gray-400" />
-          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">D-Bus</span>
-          <div class="flex-1 border-t border-dashed border-gray-400" />
+        <!-- HPC: SOVD Server + D-Bus + SomeIpGateway -->
+        <div class="rounded-xl border border-border shadow-sm overflow-hidden">
+          <div class="px-4 py-2 bg-muted/30 border-b border-border">
+            <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">HPC</span>
+          </div>
+          <div class="divide-y divide-border">
+            <!-- SOVD Server box -->
+            <div class="p-4">
+              <SovdServerPanel />
+            </div>
+            <!-- D-Bus box -->
+            <div class="px-4 py-2.5 bg-muted/20 flex items-center gap-3">
+              <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">D-Bus</span>
+              <div class="flex-1 border-t border-dashed border-border/50" />
+            </div>
+            <!-- SomeIpGateway box -->
+            <SomeIpGatewayPanel />
+          </div>
         </div>
-
-        <!-- SomeIpGateway block -->
-        <SomeIpGatewayPanel />
 
         <!-- SOME/IP connection -->
         <div class="flex items-center gap-2 px-2 py-1 opacity-40">
@@ -47,16 +54,7 @@ const ECU_ID = 'zone-controller'
 
         <ZoneControllerCard :ecu-id="ECU_ID" />
 
-        <!-- Communication: UDS · CAN / LIN -->
-        <div class="flex items-center gap-2 px-2 py-1 opacity-40">
-          <div class="flex-1 border-t border-dashed border-gray-400" />
-          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">UDS · CAN / LIN</span>
-          <div class="flex-1 border-t border-dashed border-gray-400" />
-        </div>
 
-        <div class="opacity-40 pointer-events-none">
-          <DoorEcuCard />
-        </div>
       </div>
     </main>
   </div>

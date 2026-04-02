@@ -35,11 +35,11 @@ onUnmounted(() => es?.close())
 <template>
   <div>
     <p class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">SOVD Server <span class="font-normal text-[10px] font-mono">:5000</span></p>
-    <div class="rounded-lg overflow-hidden border border-border">
+    <div class="overflow-hidden border border-border">
       <div
         ref="logEl"
         class="overflow-y-auto overflow-x-hidden font-mono text-[11px] leading-relaxed px-3 py-2 bg-gray-950"
-        style="height: 400px;"
+        style="height: 250px;"
       >
         <div
           v-for="(e, i) in entries"

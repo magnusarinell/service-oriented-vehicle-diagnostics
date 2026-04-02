@@ -60,26 +60,26 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       Zone Controller <span class="font-normal font-mono text-[10px]">vsomeip3 · 0x1111</span>
     </p>
 
-    <div class="rounded-lg border border-border bg-card overflow-hidden">
+    <div class="rounded-lg border border-gray-700 bg-gray-900 overflow-hidden">
 
       <!-- Live data -->
-      <div class="px-4 py-3 border-b border-border grid grid-cols-2 gap-x-4 gap-y-1">
+      <div class="px-4 py-3 border-b border-gray-700 grid grid-cols-2 gap-x-4 gap-y-1">
         <div
           v-for="item in data"
           :key="item.id"
           class="flex items-baseline justify-between"
         >
-          <span class="text-[10px] text-muted-foreground font-mono truncate">{{ item.name }}</span>
-          <span class="text-[11px] font-semibold font-mono ml-2 shrink-0">{{ item.value }}<span class="text-[9px] font-normal text-muted-foreground ml-0.5">{{ item.unit }}</span></span>
+          <span class="text-[10px] text-gray-400 font-mono truncate">{{ item.name }}</span>
+          <span class="text-[11px] font-semibold font-mono ml-2 shrink-0 text-gray-100">{{ item.value }}<span class="text-[9px] font-normal text-gray-500 ml-0.5">{{ item.unit }}</span></span>
         </div>
-        <div v-if="data.length === 0" class="col-span-2 text-[10px] text-muted-foreground italic py-1">
+        <div v-if="data.length === 0" class="col-span-2 text-[10px] text-gray-400 italic py-1">
           {{ ecu.error.value ? ecu.error.value : 'Loading…' }}
         </div>
       </div>
 
       <!-- Fault injection -->
-      <div class="px-4 py-3 border-b border-border">
-        <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Fault Injection</p>
+      <div class="px-4 py-3 border-b border-gray-700">
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Fault Injection</p>
         <div class="flex flex-wrap gap-1.5">
           <button
             v-for="f in INJECTABLE"
@@ -87,7 +87,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
             class="px-2.5 py-1 rounded border text-[10px] font-mono font-bold transition-all"
             :class="isActive(f.code)
               ? (severityClass[f.severity] ?? 'bg-gray-100 border-gray-300 text-gray-700')
-              : 'bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700'"
+              : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-200'"
             :title="f.description"
             @click="injectFault(f.code, f.description, f.severity)"
           >
@@ -97,7 +97,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
             />{{ f.code }}
           </button>
           <button
-            class="px-2.5 py-1 rounded border text-[10px] border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors ml-auto"
+            class="px-2.5 py-1 rounded border text-[10px] border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-200 transition-colors ml-auto"
             @click="clearFaults"
           >
             Clear all
@@ -108,10 +108,10 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
       <!-- Active faults -->
       <div class="px-4 py-3">
-        <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
           Active Faults <span class="font-normal">({{ faults.length }})</span>
         </p>
-        <div v-if="faults.length === 0" class="text-[10px] text-muted-foreground italic">No active faults</div>
+        <div v-if="faults.length === 0" class="text-[10px] text-gray-400 italic">No active faults</div>
         <div v-else class="space-y-1">
           <div
             v-for="f in faults"
@@ -122,8 +122,8 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
               class="px-1.5 py-0.5 rounded font-mono font-bold border"
               :class="severityClass[f.severity] ?? 'bg-gray-100 border-gray-300 text-gray-700'"
             >{{ f.code }}</span>
-            <span class="text-muted-foreground truncate">{{ f.description }}</span>
-            <span class="ml-auto text-[9px] text-muted-foreground shrink-0">{{ f.status }}</span>
+            <span class="text-gray-400 truncate">{{ f.description }}</span>
+            <span class="ml-auto text-[9px] text-gray-500 shrink-0">{{ f.status }}</span>
           </div>
         </div>
       </div>

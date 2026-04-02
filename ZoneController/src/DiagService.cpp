@@ -25,10 +25,10 @@ static const json DATA_ITEMS = json::array({
 });
 
 static const json OPERATIONS = json::array({
-    {{"id","reset"},        {"name","ECU Reset"},       {"description","Perform a soft reset of the ECU"}},
-    {{"id","self_test"},    {"name","Self-Test"},       {"description","Run internal ECU self-diagnostics"}},
-    {{"id","inject_fault"}, {"name","Inject Fault"},    {"description","Inject a fault code (params: code, severity, description)"}},
-    {{"id","clear_faults"}, {"name","Clear All Faults"},{"description","Clear all active fault codes"}},
+    {{"id","reset"},        {"name","ECU Reset"},        {"description","Perform a soft reset of the ECU"}},
+    {{"id","self_test"},    {"name","Self-Test"},        {"description","Run internal ECU self-diagnostics"}},
+    {{"id","inject_fault"}, {"name","Inject Fault"},     {"description","Inject a fault code (params: code, severity, description)"}},
+    {{"id","clear_faults"}, {"name","Clear All Faults"}, {"description","Clear all active fault codes"}},
 });
 
 // Fault store: starts empty, populated via inject_fault operation
@@ -146,14 +146,28 @@ private:
 
     void onGetFaults(const std::shared_ptr<vsomeip::message>& req)
     {
-        std::cout << "[ECM] ← GetFaults (" << activeFaults.size() << " active)\n";
-        sendResponse(app_, req, activeFaults.dump());
+        /* Merge ZC-local faults with door ECU faults from latest UDS poll */
+        json combined = activeFaults;
+        {
+            std::lock_guard<std::mutex> lk(g_doorFaultsMtx);
+            for (auto& f : g_doorEcuFaults) combined.push_back(f);
+        }
+        std::cout << "[ECM] ← GetFaults (" << combined.size() << " total)\n";
+        sendResponse(app_, req, combined.dump());
     }
 
     void onClearFaults(const std::shared_ptr<vsomeip::message>& req)
     {
         std::cout << "[ECM] ← ClearFaults\n";
+        /* Clear ZC-local faults */
         activeFaults = json::array();
+        /* Send UDS 0x14 to door ECU */
+        if (g_uds.isOpen()) {
+            std::vector<uint8_t> udsReq = { 0x14u, 0xFFu, 0xFFu, 0xFFu };
+            g_uds.request(udsReq, 400);
+            std::lock_guard<std::mutex> lk(g_doorFaultsMtx);
+            g_doorEcuFaults = json::array();
+        }
         sendResponse(app_, req, R"({"status":"ok"})");
     }
 

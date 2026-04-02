@@ -34,7 +34,10 @@ HPC/SomeIpGateway/build/
 ZoneController/build/
 DoorECU/build/
 Simulator/frontend/dist/
-Simulator/renode-bridge/node_modules/
+renode-bridge/node_modules/
+
+# ── Tools (downloaded binaries, not checked in) ───────────────────────────────
+tools/
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 .docker/

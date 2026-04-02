@@ -34,6 +34,24 @@ function ecuFor(id: string) { return useEcu(id) }
 const ecus = computed(() =>
   Object.fromEntries(discoveredComponents.value.map(c => [c.id, ecuFor(c.id)])))
 
+// ── Sub-component discovery ────────────────────────────────────────────
+const subComponents = ref<Record<string, SovdComponent[]>>({})
+
+async function loadSubComponents(parentId: string) {
+  try {
+    const res = await fetch(`/api/v1/ecu/${parentId}/components`)
+    if (res.ok) {
+      const subs: SovdComponent[] = await res.json()
+      subComponents.value = { ...subComponents.value, [parentId]: subs }
+      // Load each sub-component's data using compound path as ecuId
+      for (const sub of subs) {
+        const compoundId = `${parentId}/components/${sub.id}`
+        loadAll(compoundId)
+      }
+    }
+  } catch { /* server not ready */ }
+}
+
 async function loadAll(id: string) {
   const ecu = ecus.value[id]
   if (!ecu) return
@@ -54,7 +72,10 @@ async function loadAll(id: string) {
 }
 
 watch(discoveredComponents, (comps) => {
-  for (const c of comps) loadAll(c.id)
+  for (const c of comps) {
+    loadAll(c.id)
+    loadSubComponents(c.id)
+  }
 }, { immediate: true })
 
 // ── Subscriptions (polling) ───────────────────────────────────────────
@@ -101,12 +122,13 @@ interface TreeNode {
   placeholder?: boolean
 }
 
-function componentSubtree(c: SovdComponent): TreeNode {
-  const base = `/api/v1/ecu/${c.id}`
+function componentSubtree(c: SovdComponent, baseOverride?: string): TreeNode {
+  const base = baseOverride ?? `/api/v1/ecu/${c.id}`
   const d = dataFor(c.id)
+  const subs = subComponents.value[c.id] ?? []
   return {
     key:         c.id,
-    label:       c.id,
+    label:       c.id.split('/').pop()!,
     url:         base,
     method:      'GET',
     description: c.description,
@@ -170,6 +192,17 @@ function componentSubtree(c: SovdComponent): TreeNode {
           description: op.name,
         })),
       },
+      ...(subs.length ? [{
+        key:    `${c.id}.components`,
+        label:  'components',
+        url:    `${base}/components`,
+        method: 'GET' as const,
+        children: subs.map(sub => {
+          const compoundId  = `${c.id}/components/${sub.id}`
+          const subBase     = `${base}/components/${sub.id}`
+          return componentSubtree({ ...sub, id: compoundId }, subBase)
+        }),
+      }] : []),
     ],
   }
 }

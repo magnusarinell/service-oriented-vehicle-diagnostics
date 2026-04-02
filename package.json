@@ -10,8 +10,7 @@
     "start:someip-gw": "sleep 2 && exec env VSOMEIP_CONFIGURATION=docker/someip-gateway-local.json LD_LIBRARY_PATH=vendor/install/lib HPC/SomeIpGateway/build/someip-gateway",
     "start:sovd": "sleep 3 && exec dotnet run --project HPC/SovdServer/SovdServer.csproj",
     "start:ui": "sleep 1 && exec node \"$npm_execpath\" run dev --prefix SovdClient",
-    "build": "node \"$npm_execpath\" run build:doorecu && node \"$npm_execpath\" run build:sovdserver",
-    "build:doorecu": "bash scripts/build_doorecu.sh",
+    "build": "node \"$npm_execpath\" run build:sovdserver",
     "build:sovdserver": "dotnet build HPC/SovdServer/SovdServer.csproj -c Release"
   },
   "devDependencies": {
