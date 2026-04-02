@@ -1,4 +1,4 @@
-# Multi-stage build for CDA / Component Diagnostic Adapter (C++ vsomeip + sdbus-c++)
+# Multi-stage build for SomeIpGateway (C++ vsomeip + sdbus-c++)
 FROM ubuntu:22.04 AS build
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -25,12 +25,12 @@ RUN git clone --depth 1 --branch 2.1.0 \
 RUN cmake -S /opt/sdbus-src -B /opt/sdbus-build \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr/local \
-      -DBUILD_CODE_GEN=ON \
+      -DSDBUSCPP_BUILD_CODEGEN=ON \
     && cmake --build /opt/sdbus-build -j$(nproc) \
     && cmake --install /opt/sdbus-build
 
 WORKDIR /app
-COPY HPC/CDA/ .
+COPY HPC/SomeIpGateway/ .
 
 RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j$(nproc)
@@ -46,9 +46,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=build /usr/local/lib/libvsomeip3*.so*   /usr/local/lib/
 COPY --from=build /usr/local/lib/libsdbus-c++*.so*  /usr/local/lib/
-COPY --from=build /app/build/cda                    /app/cda
+COPY --from=build /app/build/someip-gateway         /app/someip-gateway
 
 RUN ldconfig
 
 ENV VSOMEIP_CONFIGURATION=/etc/vsomeip/vsomeip.json
-ENTRYPOINT ["/app/cda"]
+ENTRYPOINT ["/app/someip-gateway"]

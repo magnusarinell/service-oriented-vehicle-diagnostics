@@ -17,7 +17,6 @@ endif()
 
 add_executable(zone-controller
   src/main.cpp
-  src/DiagService.cpp
 )
 
 target_include_directories(zone-controller PRIVATE

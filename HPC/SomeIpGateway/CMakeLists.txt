@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(CDA CXX)
+project(SomeIpGateway CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,9 +23,17 @@ set(IFACE_XML   ${CMAKE_CURRENT_SOURCE_DIR}/interfaces/cda-dbus.xml)
 set(ADAPTOR_H   ${CMAKE_CURRENT_BINARY_DIR}/cda-dbus-adaptor.h)
 set(PROXY_H     ${CMAKE_CURRENT_BINARY_DIR}/cda-dbus-proxy.h)   # not used here
 
+# sdbus-c++ v2.x does not export xml2cpp as a CMake target; locate binary directly.
+find_program(SDBUS_XML2CPP sdbus-c++-xml2cpp
+  PATHS ${CMAKE_PREFIX_PATH}/bin
+  NO_DEFAULT_PATH)
+if(NOT SDBUS_XML2CPP)
+  message(FATAL_ERROR "sdbus-c++-xml2cpp not found. Set CMAKE_PREFIX_PATH to vendor/install.")
+endif()
+
 add_custom_command(
   OUTPUT  ${ADAPTOR_H} ${PROXY_H}
-  COMMAND SDBusCpp::sdbus-c++-xml2cpp
+  COMMAND ${SDBUS_XML2CPP}
           ${IFACE_XML}
           --adaptor=${ADAPTOR_H}
           --proxy=${PROXY_H}
@@ -34,19 +42,19 @@ add_custom_command(
 )
 
 # ── Executable ───────────────────────────────────────────────────────────────
-add_executable(cda
+add_executable(someip-gateway
   src/main.cpp
   src/GatewayDbusService.cpp
   src/EcuSomeIpClient.cpp
   ${ADAPTOR_H}
 )
 
-target_include_directories(cda PRIVATE
+target_include_directories(someip-gateway PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}   # generated headers
   ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(cda PRIVATE
+target_link_libraries(someip-gateway PRIVATE
   SDBusCpp::sdbus-c++
   vsomeip3
   Boost::system

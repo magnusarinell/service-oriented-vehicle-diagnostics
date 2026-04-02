@@ -8,7 +8,7 @@
     },
     "applications": [
         {
-            "name": "cda",
+            "name": "someip-gateway",
             "id": "0x1414"
         }
     ],

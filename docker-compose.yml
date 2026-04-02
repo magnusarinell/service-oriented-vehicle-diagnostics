@@ -26,17 +26,17 @@ services:
       sovd-net:
         ipv4_address: 172.20.0.10
 
-  # ── CDA / Component Diagnostic Adapter (SOME/IP client + D-Bus service) ──
-  cda:
+  # ── SomeIpGateway (SOME/IP client + D-Bus service) ──────────────────────
+  some-ip-gateway:
     build:
       context: .
-      dockerfile: docker/cda.Dockerfile
+      dockerfile: docker/someip-gateway.Dockerfile
     depends_on:
       - dbus-daemon
       - zone-controller
     volumes:
       - dbus-socket:/run/dbus
-      - ./docker/cda-vsomeip.json:/etc/vsomeip/vsomeip.json:ro
+      - ./docker/someip-gateway.json:/etc/vsomeip/vsomeip.json:ro
     environment:
       DBUS_SYSTEM_BUS_ADDRESS: "unix:path=/run/dbus/system_bus_socket"
     networks:
@@ -50,7 +50,7 @@ services:
       dockerfile: docker/sovd-server.Dockerfile
     depends_on:
       - dbus-daemon
-      - cda
+      - some-ip-gateway
     volumes:
       - dbus-socket:/run/dbus
     environment:

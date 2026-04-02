@@ -13,6 +13,9 @@ dist/
 .vite/
 *.local
 
+# ── Vendor (vsomeip, sdbus-c++ built locally) ─────────────────────────────────
+vendor/
+
 # ── C++ / CMake ───────────────────────────────────────────────────────────────
 build/
 cmake-build-*/
@@ -27,7 +30,7 @@ Makefile
 *.dylib
 
 # Generated D-Bus glue headers (produced at build time by sdbus-c++-xml2cpp)
-HPC/CDA/build/
+HPC/SomeIpGateway/build/
 ZoneController/build/
 DoorECU/build/
 Simulator/frontend/dist/

@@ -4,6 +4,7 @@
 #include <functional>
 #include <mutex>
 #include <condition_variable>
+#include <thread>
 
 // SOME/IP service coordinates for ECM
 static constexpr vsomeip::service_t  ECU_SERVICE_ID  = 0x1111;
