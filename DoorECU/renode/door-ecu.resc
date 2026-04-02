@@ -14,7 +14,7 @@
 
 # Create machine
 mach create "door-ecu"
-machine LoadPlatformDescription @renode/door-ecu.repl
+machine LoadPlatformDescription @DoorECU/renode/door-ecu.repl
 
 # Load firmware ELF
 # Build first:

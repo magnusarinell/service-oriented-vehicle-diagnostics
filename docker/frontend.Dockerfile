@@ -2,10 +2,10 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY SovdClient/package.json SovdClient/package-lock.json* ./
 RUN npm ci
 
-COPY frontend/ .
+COPY SovdClient/ .
 RUN npm run build
 
 # ── Runtime: nginx ────────────────────────────────────────────────────────────

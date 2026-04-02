@@ -22,12 +22,7 @@ builder.Logging.AddFilter<Microsoft.Extensions.Logging.Console.ConsoleLoggerProv
 builder.Services.Configure<JsonOptions>(opt =>
     opt.SerializerOptions.TypeInfoResolverChain.Add(SovdSerializationContext.Default));
 
-// Gateway: choose via env var SOVD_GATEWAY_IMPL (inmemory | dbus)
-var gatewayImpl = Environment.GetEnvironmentVariable("SOVD_GATEWAY_IMPL") ?? "inmemory";
-if (gatewayImpl == "dbus")
-    builder.Services.AddSingleton<IEcuGateway, DbusEcuGateway>();
-else
-    builder.Services.AddSingleton<IEcuGateway, InMemoryEcuGateway>();
+builder.Services.AddSingleton<IEcuGateway, DbusEcuGateway>();
 
 // CORS for local frontend dev
 builder.Services.AddCors(opt =>
