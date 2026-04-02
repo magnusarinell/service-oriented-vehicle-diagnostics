@@ -25,15 +25,14 @@ static const json DATA_ITEMS = json::array({
 });
 
 static const json OPERATIONS = json::array({
-    {{"id","reset"},     {"name","ECU Reset"},  {"description","Perform a soft reset of the ECU"}},
-    {{"id","self_test"}, {"name","Self-Test"},  {"description","Run internal ECU self-diagnostics"}},
+    {{"id","reset"},        {"name","ECU Reset"},       {"description","Perform a soft reset of the ECU"}},
+    {{"id","self_test"},    {"name","Self-Test"},       {"description","Run internal ECU self-diagnostics"}},
+    {{"id","inject_fault"}, {"name","Inject Fault"},    {"description","Inject a fault code (params: code, severity, description)"}},
+    {{"id","clear_faults"}, {"name","Clear All Faults"},{"description","Clear all active fault codes"}},
 });
 
-// Fault store: mutable so ClearFaults can empty it
-static json activeFaults = json::array({
-    {{"code","P0100"},{"description","Mass or Volume Air Flow Circuit Malfunction"},{"severity","high"},  {"status","active"}},
-    {{"code","P0200"},{"description","Injector Circuit Malfunction"},               {"severity","medium"},{"status","pending"}},
-});
+// Fault store: starts empty, populated via inject_fault operation
+static json activeFaults = json::array();
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -56,6 +55,17 @@ static void sendResponse(
     payload->set_data(data);
     response->set_payload(payload);
     app->send(response);
+}
+
+// Split "ecuId:opId:paramsJson" → {ecuId, opId, paramsJson}
+static std::tuple<std::string,std::string,std::string> splitArg(const std::string& arg)
+{
+    auto c1 = arg.find(':');
+    if (c1 == std::string::npos) return {arg, "", "{}"};
+    auto rest = arg.substr(c1 + 1);
+    auto c2 = rest.find(':');
+    if (c2 == std::string::npos) return {arg.substr(0, c1), rest, "{}"};
+    return {arg.substr(0, c1), rest.substr(0, c2), rest.substr(c2 + 1)};
 }
 
 // ── Service class ──────────────────────────────────────────────────────────
@@ -102,26 +112,28 @@ private:
             app_->offer_service(ECU_SERVICE_ID, ECU_INSTANCE_ID);
             std::cout << "[ECM] Service offered (0x"
                       << std::hex << ECU_SERVICE_ID << "/0x"
-                      << ECU_INSTANCE_ID << ")\n";
+                      << ECU_INSTANCE_ID << std::dec << ")\n";
         }
     }
 
     void onGetCapabilities(const std::shared_ptr<vsomeip::message>& req)
     {
+        std::cout << "[ECM] ← GetCapabilities\n";
         sendResponse(app_, req, CAPABILITIES.dump());
     }
 
     void onReadData(const std::shared_ptr<vsomeip::message>& req)
     {
+        std::cout << "[ECM] ← ReadData\n";
         sendResponse(app_, req, DATA_ITEMS.dump());
     }
 
     void onReadDataItem(const std::shared_ptr<vsomeip::message>& req)
     {
-        // request body: "ecuId:dataId"
         auto arg    = payloadToString(req);
         auto colon  = arg.find(':');
         auto dataId = colon != std::string::npos ? arg.substr(colon + 1) : arg;
+        std::cout << "[ECM] ← ReadDataItem(" << dataId << ")\n";
 
         for (auto& item : DATA_ITEMS) {
             if (item["id"].get<std::string>() == dataId) {
@@ -134,26 +146,28 @@ private:
 
     void onGetFaults(const std::shared_ptr<vsomeip::message>& req)
     {
+        std::cout << "[ECM] ← GetFaults (" << activeFaults.size() << " active)\n";
         sendResponse(app_, req, activeFaults.dump());
     }
 
     void onClearFaults(const std::shared_ptr<vsomeip::message>& req)
     {
+        std::cout << "[ECM] ← ClearFaults\n";
         activeFaults = json::array();
         sendResponse(app_, req, R"({"status":"ok"})");
     }
 
     void onGetOperations(const std::shared_ptr<vsomeip::message>& req)
     {
+        std::cout << "[ECM] ← GetOperations\n";
         sendResponse(app_, req, OPERATIONS.dump());
     }
 
     void onExecuteOperation(const std::shared_ptr<vsomeip::message>& req)
     {
-        // request body: "ecuId:operationId"
-        auto arg   = payloadToString(req);
-        auto colon = arg.find(':');
-        auto opId  = colon != std::string::npos ? arg.substr(colon + 1) : arg;
+        auto arg = payloadToString(req);
+        auto [ecuId, opId, paramsStr] = splitArg(arg);
+        std::cout << "[ECM] ← ExecuteOperation(" << opId << ") params=" << paramsStr << "\n";
 
         json result;
         if (opId == "reset") {
@@ -161,6 +175,25 @@ private:
         } else if (opId == "self_test") {
             result = {{"status","ok"},{"message","Self-test passed"},
                       {"outputParameters",{{"result","pass"}}}};
+        } else if (opId == "inject_fault") {
+            try {
+                auto params = json::parse(paramsStr);
+                std::string code  = params.value("code", "PXXXX");
+                std::string sev   = params.value("severity", "medium");
+                std::string desc  = params.value("description", "Injected fault");
+                // Remove existing entry with same code, then add
+                activeFaults.erase(std::remove_if(activeFaults.begin(), activeFaults.end(),
+                    [&](const json& f){ return f.value("code","") == code; }), activeFaults.end());
+                activeFaults.push_back({{"code",code},{"description",desc},{"severity",sev},{"status","active"}});
+                std::cout << "[ECM] Injected fault " << code << "\n";
+                result = {{"status","ok"},{"message","Fault " + code + " injected"}};
+            } catch (const std::exception& e) {
+                result = {{"status","error"},{"message",std::string("Bad params: ") + e.what()}};
+            }
+        } else if (opId == "clear_faults") {
+            activeFaults = json::array();
+            std::cout << "[ECM] Cleared all faults\n";
+            result = {{"status","ok"},{"message","All faults cleared"}};
         } else {
             result = {{"status","error"},{"message","Unknown operation: " + opId}};
         }

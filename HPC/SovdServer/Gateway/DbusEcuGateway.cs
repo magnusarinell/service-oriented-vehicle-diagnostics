@@ -1,12 +1,12 @@
 using SovdServer.Models;
 using Tmds.DBus.Protocol;
+using Microsoft.Extensions.Logging;
 
 namespace SovdServer.Gateway;
 
 /// <summary>
 /// D-Bus gateway that communicates with the CDA C++ service.
 /// Requires the dbus-daemon container and CDA container to be running.
-/// Activated when SOVD_GATEWAY_IMPL=dbus.
 /// </summary>
 internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
 {
@@ -16,9 +16,11 @@ internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
 
     private readonly Connection _connection;
     private readonly Task _connectTask;
+    private readonly ILogger<DbusEcuGateway> _logger;
 
-    public DbusEcuGateway()
+    public DbusEcuGateway(ILogger<DbusEcuGateway> logger)
     {
+        _logger = logger;
         var socketPath = Environment.GetEnvironmentVariable("DBUS_SOCKET_PATH")
             ?? "/run/dbus/system_bus_socket";
         _connection = new Connection($"unix:path={socketPath}");
@@ -30,9 +32,6 @@ internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
         _connection.Dispose();
         return ValueTask.CompletedTask;
     }
-
-    // All methods delegate to D-Bus calls. The CDA service serialises
-    // its responses as JSON strings so we can deserialise here with source-gen context.
 
     public async Task<List<SovdCapability>> GetCapabilitiesAsync(string ecuId, CancellationToken ct = default)
     {
@@ -70,18 +69,32 @@ internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
     public async Task<SovdOperationResult> ExecuteOperationAsync(
         string ecuId, string operationId, SovdOperationRequest request, CancellationToken ct = default)
     {
-        var json = await CallMethodAsync("ExecuteOperation", $"{ecuId}:{operationId}", ct);
+        var paramsJson = request.Parameters is { Count: > 0 }
+            ? System.Text.Json.JsonSerializer.Serialize(request.Parameters, SovdSerializationContext.Default.DictionaryStringString)
+            : "{}";
+        var json = await CallMethodAsync("ExecuteOperation", $"{ecuId}:{operationId}:{paramsJson}", ct);
         return System.Text.Json.JsonSerializer.Deserialize(json, SovdSerializationContext.Default.SovdOperationResult)
             ?? new SovdOperationResult("error", "Empty response from gateway", null);
     }
 
     private async Task<string> CallMethodAsync(string methodName, string argument, CancellationToken ct)
     {
-        await _connectTask;
-        var message = CreateMethodCall(methodName, argument);
-        var result = await _connection.CallMethodAsync(message,
-            static (Message msg, object? _) => msg.GetBodyReader().ReadString());
-        return result ?? "[]";
+        _logger.LogInformation("→ {Method} ({Arg})", methodName, argument.Length > 80 ? argument[..80] + "…" : argument);
+        try
+        {
+            await _connectTask;
+            var message = CreateMethodCall(methodName, argument);
+            var result = await _connection.CallMethodAsync(message,
+                static (Message msg, object? _) => msg.GetBodyReader().ReadString());
+            var response = result ?? "[]";
+            _logger.LogInformation("← {Method} {Bytes}B", methodName, response.Length);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("✕ {Method} failed: {Error}", methodName, ex.Message);
+            throw;
+        }
     }
 
     private MessageBuffer CreateMethodCall(string methodName, string argument)

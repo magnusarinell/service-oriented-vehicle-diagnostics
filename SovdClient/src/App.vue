@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import SovdExplorer       from '@/components/SovdExplorer.vue'
-import SovdServerPanel    from '@/components/SovdServerPanel.vue'
-import ZoneControllerCard from '@/components/ZoneControllerCard.vue'
-import DoorEcuCard        from '@/components/DoorEcuCard.vue'
+import SovdExplorer         from '@/components/SovdExplorer.vue'
+import SovdServerPanel      from '@/components/SovdServerPanel.vue'
+import SomeIpGatewayPanel   from '@/components/SomeIpGatewayPanel.vue'
+import ZoneControllerCard   from '@/components/ZoneControllerCard.vue'
+import DoorEcuCard          from '@/components/DoorEcuCard.vue'
 
 const ECU_ID = 'door-ecu'
 </script>
@@ -35,12 +36,7 @@ const ECU_ID = 'door-ecu'
         </div>
 
         <!-- SomeIpGateway block -->
-        <div class="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
-          <div class="flex-1 min-w-0">
-            <p class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">SomeIp Gateway</p>
-            <p class="text-[10px] font-mono text-muted-foreground mt-0.5">D-Bus ↔ SOME/IP bridge · HPC internal</p>
-          </div>
-        </div>
+        <SomeIpGatewayPanel />
 
         <!-- SOME/IP connection -->
         <div class="flex items-center gap-2 px-2 py-1 opacity-40">
