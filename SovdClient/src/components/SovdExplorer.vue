@@ -75,6 +75,14 @@ watch(discoveredComponents, (comps) => {
   for (const c of comps) {
     loadAll(c.id)
     loadSubComponents(c.id)
+    // Auto-poll faults and data for every top-level component
+    for (const section of ['faults', 'data'] as const) {
+      const key = `${c.id}.${section}`
+      if (!subTimers[key]) {
+        subscriptions.value = { ...subscriptions.value, [key]: true }
+        subTimers[key] = setInterval(() => subLoader(key)?.(), 4000)
+      }
+    }
   }
 }, { immediate: true })
 
@@ -218,7 +226,7 @@ const tree = computed<TreeNode>(() => ({
       label:    'components',
       url:      '/api/v1/components',
       method:   'GET',
-      children: discoveredComponents.value.map(componentSubtree),
+      children: discoveredComponents.value.map(c => componentSubtree(c)),
     },
     {
       key:         'apps',
