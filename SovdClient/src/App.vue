@@ -27,23 +27,40 @@ const ECU_ID = 'door-ecu'
       <div class="w-[640px] shrink-0 overflow-y-auto bg-muted/5 p-4 space-y-2">
         <SovdServerPanel />
 
-        <!-- Communication: D-Bus + SOME/IP (HPC internal) -->
+        <!-- D-Bus connection -->
         <div class="flex items-center gap-2 px-2 py-1 opacity-40">
           <div class="flex-1 border-t border-dashed border-gray-400" />
-          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">D-Bus · SOME/IP</span>
+          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">D-Bus</span>
+          <div class="flex-1 border-t border-dashed border-gray-400" />
+        </div>
+
+        <!-- SomeIpGateway block -->
+        <div class="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <p class="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">SomeIp Gateway</p>
+            <p class="text-[10px] font-mono text-muted-foreground mt-0.5">D-Bus ↔ SOME/IP bridge · HPC internal</p>
+          </div>
+        </div>
+
+        <!-- SOME/IP connection -->
+        <div class="flex items-center gap-2 px-2 py-1 opacity-40">
+          <div class="flex-1 border-t border-dashed border-gray-400" />
+          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">SOME/IP</span>
           <div class="flex-1 border-t border-dashed border-gray-400" />
         </div>
 
         <ZoneControllerCard />
 
-        <!-- Communication: UDS -->
+        <!-- Communication: UDS · CAN / LIN -->
         <div class="flex items-center gap-2 px-2 py-1 opacity-40">
           <div class="flex-1 border-t border-dashed border-gray-400" />
           <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">UDS · CAN / LIN</span>
           <div class="flex-1 border-t border-dashed border-gray-400" />
         </div>
 
-        <DoorEcuCard />
+        <div class="opacity-40 pointer-events-none">
+          <DoorEcuCard />
+        </div>
       </div>
     </main>
   </div>

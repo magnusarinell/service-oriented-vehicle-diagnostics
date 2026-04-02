@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useEcu } from '@/composables/useEcu'
-import { useRenode } from '@/composables/useRenode'
 import type { SovdFault, SovdDataItem, SovdOperation, SovdCapability } from '@/types/sovd'
 
 const props = defineProps<{ ecuId: string }>()
 
 const ecu = useEcu(props.ecuId)
-const renode = useRenode()
 
 // ── Tree node definition ─────────────────────────────────────────────
 interface TreeNode {
@@ -42,9 +40,6 @@ async function loadFaults()       {
 async function loadOperations()   { const r = await ecu.fetchOperations();   if (r) operations.value  = r }
 
 loadCapabilities(); loadData(); loadFaults(); loadOperations()
-
-// When Renode pushes a faultFlags update → immediately refresh SOVD faults
-watch(renode.faultFlags, loadFaults)
 
 // ── Subscriptions (SSE simulated via polling + WS trigger) ───────────
 // SOVD standard uses SSE; since this demo server doesn't implement it,

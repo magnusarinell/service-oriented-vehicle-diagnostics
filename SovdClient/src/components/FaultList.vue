@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useEcu } from '@/composables/useEcu'
-import { useRenode } from '@/composables/useRenode'
 import type { SovdFault } from '@/types/sovd'
 
 const props = defineProps<{ ecuId: string }>()
@@ -34,9 +33,7 @@ const statusClass: Record<string, string> = {
   inactive: 'text-gray-400',
 }
 
-const renode = useRenode()
 onMounted(load)
-watch(renode.faultFlags, load)
 </script>
 
 <template>

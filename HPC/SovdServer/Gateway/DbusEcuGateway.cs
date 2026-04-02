@@ -15,12 +15,14 @@ internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
     private const string InterfaceName = "com.vehicle.gateway.IDiagnosticManager";
 
     private readonly Connection _connection;
+    private readonly Task _connectTask;
 
     public DbusEcuGateway()
     {
         var socketPath = Environment.GetEnvironmentVariable("DBUS_SOCKET_PATH")
             ?? "/run/dbus/system_bus_socket";
         _connection = new Connection($"unix:path={socketPath}");
+        _connectTask = _connection.ConnectAsync().AsTask();
     }
 
     public ValueTask DisposeAsync()
@@ -75,7 +77,7 @@ internal sealed class DbusEcuGateway : IEcuGateway, IAsyncDisposable
 
     private async Task<string> CallMethodAsync(string methodName, string argument, CancellationToken ct)
     {
-        await _connection.ConnectAsync();
+        await _connectTask;
         var message = CreateMethodCall(methodName, argument);
         var result = await _connection.CallMethodAsync(message,
             static (Message msg, object? _) => msg.GetBodyReader().ReadString());

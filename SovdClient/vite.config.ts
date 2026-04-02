@@ -22,10 +22,6 @@ export default defineConfig({
           })
         },
       },
-      '/ws/renode': {
-        target: 'ws://localhost:8787',
-        ws: true,
-      },
     },
   },
 })
