@@ -35,3 +35,9 @@ public record SovdOperationResult(
     string? Message,
     Dictionary<string, string>? OutputParameters
 );
+
+public record SovdComponent(
+    string Id,
+    string Name,
+    string Description
+);

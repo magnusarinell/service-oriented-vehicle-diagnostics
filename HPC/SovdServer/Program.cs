@@ -24,7 +24,16 @@ builder.Services.Configure<JsonOptions>(opt =>
 
 builder.Services.AddSingleton<IEcuGateway, DbusEcuGateway>();
 
-// CORS for local frontend dev
+// ──────────────────────────────────────────────
+//  Component registry  (SOVD discovery)
+// ──────────────────────────────────────────────
+var knownComponents = new List<SovdComponent>
+{
+    new("zone-controller", "Zone Controller", "Door ECU zone · SOME/IP diagnostic service"),
+};
+builder.Services.AddSingleton(knownComponents);
+
+// ── CORS for local frontend dev
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p
         .WithOrigins("http://localhost:5174")
@@ -65,7 +74,14 @@ app.MapGet("/api/v1/logs/stream", async (LogBroadcaster logs, HttpContext ctx, C
 });
 
 // ──────────────────────────────────────────────
+//  SOVD discovery   /api/v1/components
+// ──────────────────────────────────────────────
+app.MapGet("/api/v1/components", (List<SovdComponent> components) =>
+    Results.Ok(components));
+
+// ──────────────────────────────────────────────
 //  SOVD REST routes   /api/v1/ecu/{ecuId}/...
+// ──────────────────────────────────────────────
 // ──────────────────────────────────────────────
 var ecu = app.MapGroup("/api/v1/ecu/{ecuId}");
 

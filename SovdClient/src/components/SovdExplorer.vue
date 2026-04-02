@@ -3,11 +3,90 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import { useEcu } from '@/composables/useEcu'
 import type { SovdFault, SovdDataItem, SovdOperation, SovdCapability } from '@/types/sovd'
 
-const props = defineProps<{ ecuId: string }>()
+// ── Component discovery ───────────────────────────────────────────────
+interface SovdComponent { id: string; name: string; description: string }
+const discoveredComponents = ref<SovdComponent[]>([])
 
-const ecu = useEcu(props.ecuId)
+async function loadComponents() {
+  try {
+    const res = await fetch('/api/v1/components')
+    if (res.ok) discoveredComponents.value = await res.json()
+  } catch { /* server not yet up */ }
+}
+loadComponents()
 
-// ── Tree node definition ─────────────────────────────────────────────
+// ── Per-component data stores ─────────────────────────────────────────
+interface ComponentData {
+  capabilities: SovdCapability[]
+  dataItems:    SovdDataItem[]
+  faults:       SovdFault[]
+  operations:   SovdOperation[]
+}
+const componentData = ref<Record<string, ComponentData>>({})
+
+function dataFor(id: string): ComponentData {
+  if (!componentData.value[id])
+    componentData.value[id] = { capabilities: [], dataItems: [], faults: [], operations: [] }
+  return componentData.value[id]
+}
+
+function ecuFor(id: string) { return useEcu(id) }
+const ecus = computed(() =>
+  Object.fromEntries(discoveredComponents.value.map(c => [c.id, ecuFor(c.id)])))
+
+async function loadAll(id: string) {
+  const ecu = ecus.value[id]
+  if (!ecu) return
+  const [caps, data, faults, ops] = await Promise.all([
+    ecu.fetchCapabilities(),
+    ecu.fetchData(),
+    ecu.fetchFaults(),
+    ecu.fetchOperations(),
+  ])
+  const d = dataFor(id)
+  if (caps)  d.capabilities = caps
+  if (data)  d.dataItems    = data
+  if (faults) {
+    d.faults = faults
+    if (faults.length > 0) expanded.value = { ...expanded.value, [`${id}.faults`]: true }
+  }
+  if (ops)   d.operations   = ops
+}
+
+watch(discoveredComponents, (comps) => {
+  for (const c of comps) loadAll(c.id)
+}, { immediate: true })
+
+// ── Subscriptions (polling) ───────────────────────────────────────────
+const subscriptions = ref<Record<string, boolean>>({})
+const subTimers: Record<string, ReturnType<typeof setInterval>> = {}
+
+function subLoader(key: string): (() => Promise<void>) | undefined {
+  const [id, section] = key.split('.')
+  const ecu = ecus.value[id]
+  if (!ecu) return undefined
+  const d = dataFor(id)
+  if (section === 'faults') return async () => { const r = await ecu.fetchFaults(); if (r) d.faults = r }
+  if (section === 'data')   return async () => { const r = await ecu.fetchData();   if (r) d.dataItems = r }
+  return undefined
+}
+
+function toggleSubscribe(key: string, e: Event) {
+  e.stopPropagation()
+  if (subscriptions.value[key]) {
+    subscriptions.value = { ...subscriptions.value, [key]: false }
+    clearInterval(subTimers[key]); delete subTimers[key]
+  } else {
+    subscriptions.value = { ...subscriptions.value, [key]: true }
+    const fn = subLoader(key)
+    fn?.()
+    subTimers[key] = setInterval(() => subLoader(key)?.(), 3000)
+  }
+}
+
+onUnmounted(() => Object.values(subTimers).forEach(t => clearInterval(t)))
+
+// ── Tree (computed — reactive to discovered components + loaded data) ──
 interface TreeNode {
   key: string
   label: string
@@ -22,125 +101,91 @@ interface TreeNode {
   placeholder?: boolean
 }
 
-// ── Remote data ───────────────────────────────────────────────────────
-const capabilities = ref<SovdCapability[]>([])
-const dataItems     = ref<SovdDataItem[]>([])
-const faults        = ref<SovdFault[]>([])
-const operations    = ref<SovdOperation[]>([])
-
-async function loadCapabilities() { const r = await ecu.fetchCapabilities(); if (r) capabilities.value = r }
-async function loadData()         { const r = await ecu.fetchData();         if (r) dataItems.value   = r }
-async function loadFaults()       {
-  const r = await ecu.fetchFaults()
-  if (r) {
-    faults.value = r
-    if (r.length > 0) expanded.value = { ...expanded.value, faults: true }
+function componentSubtree(c: SovdComponent): TreeNode {
+  const base = `/api/v1/ecu/${c.id}`
+  const d = dataFor(c.id)
+  return {
+    key:         c.id,
+    label:       c.id,
+    url:         base,
+    method:      'GET',
+    description: c.description,
+    children: [
+      {
+        key:    `${c.id}.capabilities`,
+        label:  'capabilities',
+        url:    `${base}/capabilities`,
+        method: 'GET',
+      },
+      {
+        key:          `${c.id}.data`,
+        label:        'data',
+        url:          `${base}/data`,
+        method:       'GET',
+        canSubscribe: true,
+        children: d.dataItems.map(item => ({
+          key:         `${c.id}.data.${item.id}`,
+          label:       item.id,
+          url:         `${base}/data/${item.id}`,
+          method:      'GET' as const,
+          description: `${item.value} ${item.unit}`.trim(),
+          canSubscribe: true,
+        })),
+      },
+      {
+        key:          `${c.id}.faults`,
+        label:        'faults',
+        url:          `${base}/faults`,
+        method:       'GET',
+        canSubscribe: true,
+        children: [
+          ...d.faults.map(f => ({
+            key:         `${c.id}.fault.${f.code}`,
+            label:       f.code,
+            url:         `${base}/faults`,
+            description: f.description,
+            badge:       f.status,
+            severity:    f.severity,
+            infoOnly:    true,
+          })),
+          {
+            key:         `${c.id}.faults.clear`,
+            label:       'clear',
+            url:         `${base}/faults`,
+            method:      'DELETE' as const,
+            description: 'Clear all stored fault codes',
+          },
+        ],
+      },
+      {
+        key:    `${c.id}.operations`,
+        label:  'operations',
+        url:    `${base}/operations`,
+        method: 'GET',
+        children: d.operations.map(op => ({
+          key:         `${c.id}.op.${op.id}`,
+          label:       op.id,
+          url:         `${base}/operations/${op.id}/execute`,
+          method:      'POST' as const,
+          description: op.name,
+        })),
+      },
+    ],
   }
 }
-async function loadOperations()   { const r = await ecu.fetchOperations();   if (r) operations.value  = r }
-
-loadCapabilities(); loadData(); loadFaults(); loadOperations()
-
-// ── Subscriptions (SSE simulated via polling + WS trigger) ───────────
-// SOVD standard uses SSE; since this demo server doesn't implement it,
-// we poll every 3 s AND react to bridge WebSocket pushes.
-const subscriptions = ref<Record<string, boolean>>({})
-const subTimers: Record<string, ReturnType<typeof setInterval>> = {}
-
-const SUB_LOADERS: Record<string, () => Promise<void>> = {
-  faults: loadFaults,
-  data:   loadData,
-}
-
-function toggleSubscribe(key: string, e: Event) {
-  e.stopPropagation()
-  if (subscriptions.value[key]) {
-    subscriptions.value = { ...subscriptions.value, [key]: false }
-    clearInterval(subTimers[key]); delete subTimers[key]
-  } else {
-    subscriptions.value = { ...subscriptions.value, [key]: true }
-    SUB_LOADERS[key]?.()
-    subTimers[key] = setInterval(() => SUB_LOADERS[key]?.(), 3000)
-  }
-}
-
-onUnmounted(() => Object.values(subTimers).forEach(t => clearInterval(t)))
-
-// ── Tree (computed — reactive to loaded data) ────────────────────────
-const base = computed(() => `/api/v1/ecu/${props.ecuId}`)
 
 const tree = computed<TreeNode>(() => ({
-  key:   'ecus',
-  label: 'ecu',
-  url:   '/api/v1/ecu',
+  key:    'root',
+  label:  'sovd',
+  url:    '/api/v1',
   method: 'GET',
   children: [
     {
-      key:    props.ecuId,
-      label:  props.ecuId,
-      url:    base.value,
-      method: 'GET',
-      children: [
-        {
-          key:   'capabilities',
-          label: 'capabilities',
-          url:   `${base.value}/capabilities`,
-          method: 'GET',
-        },
-        {
-          key:         'data',
-          label:       'data',
-          url:         `${base.value}/data`,
-          method:      'GET',
-          canSubscribe: true,
-          children: dataItems.value.map(item => ({
-            key:          `data.${item.id}`,
-            label:        item.id,
-            url:          `${base.value}/data/${item.id}`,
-            method:       'GET' as const,
-            description:  `${item.value} ${item.unit}`.trim(),
-            canSubscribe: true,
-          })),
-        },
-        {
-          key:         'faults',
-          label:       'faults',
-          url:         `${base.value}/faults`,
-          method:      'GET',
-          canSubscribe: true,
-          children: [
-            ...faults.value.map(f => ({
-              key:         `fault.${f.code}`,
-              label:       f.code,
-              url:         `${base.value}/faults`,
-              description: f.description,
-              badge:       f.status,
-              severity:    f.severity,
-              infoOnly:    true,
-            })),
-            {
-              key:         'faults.clear',
-              label:       'clear',
-              url:         `${base.value}/faults`,
-              method:      'DELETE' as const,
-              description: 'Clear all stored fault codes',
-            },
-          ],
-        },
-        {
-          key:    'operations',
-          label:  'operations',
-          url:    `${base.value}/operations`,
-          method: 'GET',
-          children: operations.value.map(op => ({
-            key:         `op.${op.id}`,
-            label:       op.id,
-            url:         `${base.value}/operations/${op.id}/execute`,
-            method:      'POST' as const,
-            description: op.name,
-          })),
-        },
-      ],
+      key:      'components',
+      label:    'components',
+      url:      '/api/v1/components',
+      method:   'GET',
+      children: discoveredComponents.value.map(componentSubtree),
     },
     {
       key:         'apps',
@@ -169,7 +214,7 @@ watch(tree, (t) => {
   const keys = allKeys(t)
   for (const k of keys) if (expanded.value[k] === undefined) expanded.value[k] = true
 }, { immediate: true })
-const selectedKey = ref<string | null>(props.ecuId)
+const selectedKey = ref<string | null>(null)
 
 // Flatten tree for O(1) rendering (no recursion in template)
 interface FlatNode { node: TreeNode; depth: number }
@@ -231,7 +276,12 @@ async function sendRequest() {
     const ms   = Math.round(performance.now() - t0)
     const body = res.status === 204 ? null : await res.json().catch(() => null)
     response.value = { status: res.status, body, ms, ts: new Date().toLocaleTimeString() }
-    if (node.key === 'faults.clear') await loadFaults()
+    if (node.key.endsWith('.faults.clear')) {
+      const id = node.key.replace('.faults.clear', '')
+      const ecu = ecus.value[id]
+      const d = dataFor(id)
+      if (ecu) { const r = await ecu.fetchFaults(); if (r) d.faults = r }
+    }
   } catch (e) {
     response.value = { status: 0, body: String(e), ms: 0, ts: new Date().toLocaleTimeString() }
   } finally {
@@ -317,11 +367,7 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
               :class="depth === 0 ? 'font-semibold text-foreground' : ''"
             >{{ node.label }}</span>
 
-            <!-- Placeholder badge -->
-            <span
-              v-if="node.placeholder"
-              class="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground/50 border border-border font-mono"
-            >planned</span>
+
 
             <!-- Description (value for data items / fault desc on hover) -->
             <span
@@ -413,7 +459,7 @@ const anySubscribed = computed(() => Object.values(subscriptions.value).some(Boo
             </div>
             <p class="text-sm text-gray-700 mb-1 pl-4">{{ selectedNode.description }}</p>
             <p class="text-[11px] text-muted-foreground pl-4 font-mono">severity: {{ selectedNode.severity }}</p>
-            <p class="text-[11px] text-muted-foreground pl-4 font-mono mt-0.5">source: /api/v1/ecu/{{ ecuId }}/faults</p>
+            <p class="text-[11px] text-muted-foreground pl-4 font-mono mt-0.5">source: {{ selectedNode.url }}</p>
           </div>
 
           <!-- ── POST request body ──────────────────────────────────── -->

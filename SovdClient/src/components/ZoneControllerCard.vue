@@ -3,8 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useEcu } from '@/composables/useEcu'
 import type { SovdDataItem, SovdFault } from '@/types/sovd'
 
-const ECU_ID = 'door-ecu'
-const ecu = useEcu(ECU_ID)
+const props = defineProps<{ ecuId: string }>()
+const ecu = useEcu(props.ecuId)
 
 const data   = ref<SovdDataItem[]>([])
 const faults = ref<SovdFault[]>([])

@@ -5,7 +5,7 @@ import SomeIpGatewayPanel   from '@/components/SomeIpGatewayPanel.vue'
 import ZoneControllerCard   from '@/components/ZoneControllerCard.vue'
 import DoorEcuCard          from '@/components/DoorEcuCard.vue'
 
-const ECU_ID = 'door-ecu'
+const ECU_ID = 'zone-controller'
 </script>
 
 <template>
@@ -21,7 +21,7 @@ const ECU_ID = 'door-ecu'
     <main class="flex-1 flex gap-0 overflow-hidden" style="height: calc(100vh - 72px);">
       <!-- Left: SOVD Explorer -->
       <div class="shrink-0 flex flex-col p-6 pt-4 min-h-0" style="width: 860px;">
-        <SovdExplorer class="flex-1 min-h-0" :ecu-id="ECU_ID" />
+        <SovdExplorer class="flex-1 min-h-0" />
       </div>
 
       <!-- Right: SOVD Server + ECUs -->
@@ -45,7 +45,7 @@ const ECU_ID = 'door-ecu'
           <div class="flex-1 border-t border-dashed border-gray-400" />
         </div>
 
-        <ZoneControllerCard />
+        <ZoneControllerCard :ecu-id="ECU_ID" />
 
         <!-- Communication: UDS · CAN / LIN -->
         <div class="flex items-center gap-2 px-2 py-1 opacity-40">

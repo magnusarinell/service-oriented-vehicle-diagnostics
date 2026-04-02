@@ -18,6 +18,8 @@ namespace SovdServer.Models;
 [JsonSerializable(typeof(List<SovdOperation>))]
 [JsonSerializable(typeof(SovdOperationRequest))]
 [JsonSerializable(typeof(SovdOperationResult))]
+[JsonSerializable(typeof(SovdComponent))]
+[JsonSerializable(typeof(List<SovdComponent>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(LogEntry))]
 internal partial class SovdSerializationContext : JsonSerializerContext { }
