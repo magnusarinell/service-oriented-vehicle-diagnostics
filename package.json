@@ -7,7 +7,7 @@
     "deps": "node \"$npm_execpath\" install && node \"$npm_execpath\" install --prefix SovdClient",
     "start": "concurrently --kill-others-on-fail --names \"zonecontroller,someip-gw,sovdserver,frontend\" --prefix-colors \"yellow,cyan,magenta,green\" \"node '$npm_execpath' run start:zone\" \"node '$npm_execpath' run start:someip-gw\" \"node '$npm_execpath' run start:sovd\" \"node '$npm_execpath' run start:ui\"",
     "start:zone": "VSOMEIP_CONFIGURATION=ZoneController/vsomeip/zone-controller-local.json LD_LIBRARY_PATH=vendor/install/lib ZoneController/build/zone-controller",
-    "start:someip-gw": "sleep 2 && exec env VSOMEIP_CONFIGURATION=docker/someip-gateway-local.json LD_LIBRARY_PATH=vendor/install/lib HPC/SomeIpGateway/build/someip-gateway",
+    "start:someip-gw": "sleep 2 && exec env VSOMEIP_CONFIGURATION=HPC/SomeIpGateway/vsomeip/someip-gateway-local.json LD_LIBRARY_PATH=vendor/install/lib HPC/SomeIpGateway/build/someip-gateway",
     "start:sovd": "sleep 3 && exec dotnet run --project HPC/SovdServer/SovdServer.csproj",
     "start:ui": "sleep 1 && exec node \"$npm_execpath\" run dev --prefix SovdClient",
     "build": "node \"$npm_execpath\" run build:sovdserver",
